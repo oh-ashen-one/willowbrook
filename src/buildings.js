@@ -2,6 +2,7 @@
 // Each building is a group with walls, roof, door, and a fenced yard.
 
 import * as THREE from 'three';
+import { gradientMap } from './toon.js';
 
 const ROOF_COLORS = [0xc44a3a, 0x4a8fd1, 0xc49a3a, 0x6ac44a, 0x9a4ac4, 0xd16a8f];
 const WALL_COLORS = [0xf2d6a8, 0xeac9a3, 0xddc6a4, 0xeed7b0];
@@ -51,42 +52,101 @@ export class Buildings {
   _makeBuildingShell(width, depth, wallColor, roofColor) {
     const g = new THREE.Group();
 
-    // Foundation
+    // Foundation (stone slab slightly wider than walls)
     const found = new THREE.Mesh(
-      new THREE.BoxGeometry(width + 0.4, 0.2, depth + 0.4),
-      new THREE.MeshStandardMaterial({ color: 0xa48a6a, roughness: 0.95 })
+      new THREE.BoxGeometry(width + 0.5, 0.2, depth + 0.5),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xa48a6a })
     );
     found.position.y = 0.1;
     found.receiveShadow = true; found.castShadow = true;
     g.add(found);
 
     // Walls
-    const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.85 });
+    const wallMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: wallColor });
     const walls = new THREE.Mesh(new THREE.BoxGeometry(width, 1.6, depth), wallMat);
     walls.position.y = 1.0;
     walls.castShadow = true; walls.receiveShadow = true;
     g.add(walls);
 
-    // Gable roof — proper triangular prism with ridge running along the long axis
-    const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 });
+    // Wood plank siding texture on walls (vertical grooves)
+    this._addPlankSiding(g, width, depth);
+
+    // Eave trim — a thin band running along the wall top, color of roof
+    const trimMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
+    const eaveFront = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, 0.12, 0.18), trimMat);
+    eaveFront.position.set(0, 1.86, depth / 2 + 0.08);
+    eaveFront.castShadow = true;
+    g.add(eaveFront);
+    const eaveBack = eaveFront.clone();
+    eaveBack.position.z = -(depth / 2 + 0.08);
+    g.add(eaveBack);
+    const eaveLeft = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, depth + 0.6), trimMat);
+    eaveLeft.position.set(-(width / 2 + 0.08), 1.86, 0);
+    eaveLeft.castShadow = true;
+    g.add(eaveLeft);
+    const eaveRight = eaveLeft.clone();
+    eaveRight.position.x = (width / 2 + 0.08);
+    g.add(eaveRight);
+
+    // Gable roof — triangular prism with proper overhang (extending beyond walls)
+    const roofMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: roofColor });
     const roofH = 1.1;
     const ridgeY = 1.8 + roofH * 0.5;
-    const ridge = this._makeGableRoof(width + 0.5, depth + 0.5, roofH, roofMat);
+    // Roof extends past walls by 0.6 on each axis for eaves
+    const ridge = this._makeGableRoof(width + 1.0, depth + 1.0, roofH, roofMat);
     ridge.position.y = ridgeY;
     ridge.castShadow = true;
     ridge.receiveShadow = true;
     g.add(ridge);
 
-    // Chimney
-    const chim = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.9, 0.4),
-      new THREE.MeshStandardMaterial({ color: 0x8a4a3a, roughness: 0.9 })
+    // Roof ridge cap — long thin cylinder along the peak
+    const ridgeCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, width + 1.1, 6),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a3a20 })
     );
-    chim.position.set(width * 0.32, 2.6, 0);
-    chim.castShadow = true;
+    ridgeCap.position.set(0, 2 * roofH + 0.05, 0);
+    ridgeCap.rotation.z = Math.PI / 2;
+    g.add(ridgeCap);
+
+    // Brick chimney with cap
+    const brickColor = 0xb85a4a;
+    const chim = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 1.1, 0.5),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: brickColor })
+    );
+    chim.position.set(width * 0.30, 2.85, depth * 0.15);
+    chim.castShadow = true; chim.receiveShadow = true;
     g.add(chim);
+    const chimneyCap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.65, 0.1, 0.65),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a3a20 })
+    );
+    chimneyCap.position.set(width * 0.30, 3.45, depth * 0.15);
+    g.add(chimneyCap);
 
     return g;
+  }
+
+  // Vertical wood plank lines etched into the wall surface
+  _addPlankSiding(g, width, depth) {
+    const lineMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a });
+    const plankCount = Math.floor(width / 0.18);
+    for (let i = 0; i <= plankCount; i++) {
+      const x = -width / 2 + i * 0.18;
+      const lineFront = new THREE.Mesh(new THREE.BoxGeometry(0.012, 1.6, 0.012), lineMat);
+      lineFront.position.set(x, 1.0, depth / 2 + 0.005);
+      g.add(lineFront);
+      const lineBack = lineFront.clone();
+      lineBack.position.z = -(depth / 2 + 0.005);
+      g.add(lineBack);
+    }
+    // Horizontal trim line at mid-height
+    const midFront = new THREE.Mesh(new THREE.BoxGeometry(width, 0.04, 0.015), lineMat);
+    midFront.position.set(0, 0.65, depth / 2 + 0.005);
+    g.add(midFront);
+    const midBack = midFront.clone();
+    midBack.position.z = -(depth / 2 + 0.005);
+    g.add(midBack);
   }
 
   // Triangular prism: vertices = (0,-h,0), (±w/2,0,±d/2). Custom BufferGeometry.
@@ -124,25 +184,50 @@ export class Buildings {
 
   _makeDoor(building, x, z, rotY = 0) {
     const g = new THREE.Group();
+    // Recessed doorway — frame set INTO the wall (negative z), door recessed behind frame
     const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.95, 1.4, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 0.8 })
+      new THREE.BoxGeometry(1.05, 1.5, 0.1),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x5a3a1a })
     );
-    frame.position.y = 0.7;
+    frame.position.set(0, 0.75, -0.02);
+    frame.castShadow = true;
     g.add(frame);
+    // Threshold step
+    const threshold = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 0.08, 0.4),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a8a7a })
+    );
+    threshold.position.set(0, 0.04, 0.15);
+    g.add(threshold);
+    // Door panel (recessed)
     const door = new THREE.Mesh(
       new THREE.BoxGeometry(0.7, 1.2, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0x4a2a1a, roughness: 0.7 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a2a1a })
     );
-    door.position.set(0, 0.6, 0.04);
+    door.position.set(0, 0.6, -0.005);
     g.add(door);
-    // knob
+    // Door inset panels (two horizontal raised rectangles — a classic door detail)
+    const insetMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a });
+    const inset1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.01), insetMat);
+    inset1.position.set(0, 0.85, 0.026);
+    g.add(inset1);
+    const inset2 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.32, 0.01), insetMat);
+    inset2.position.set(0, 0.32, 0.026);
+    g.add(inset2);
+    // Brass doorknob
     const knob = new THREE.Mesh(
-      new THREE.SphereGeometry(0.06, 8, 6),
-      new THREE.MeshStandardMaterial({ color: 0xffd56e, metalness: 0.7, roughness: 0.3 })
+      new THREE.SphereGeometry(0.05, 8, 6),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffd56e, emissive: 0xffd56e, emissiveIntensity: 0.3 })
     );
-    knob.position.set(0.25, 0.6, 0.08);
+    knob.position.set(0.25, 0.6, 0.04);
     g.add(knob);
+    // Stepping stone in front
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.05, 0.25),
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a8a7a })
+    );
+    step.position.set(0, 0.025, 0.4);
+    g.add(step);
     g.position.set(x, 0, z);
     g.rotation.y = rotY;
     g.userData.isDoor = true;
@@ -151,30 +236,67 @@ export class Buildings {
   }
 
   _makeWindows(building, w, d) {
-    const winMat = new THREE.MeshStandardMaterial({ color: 0x9bd1e6, roughness: 0.3, metalness: 0.1, emissive: 0xffe9b6, emissiveIntensity: 0.2 });
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 0.8 });
+    const winMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x9bd1e6, emissive: 0xffe9b6, emissiveIntensity: 0.2 });
+    const frameMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x5a3a1a });
+    const sillMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
+    const shutterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a8a3a });
 
-    const placeWindow = (x, y, z, rotY) => {
+    const placeWindow = (x, y, z, rotY, withShutters = true) => {
       const grp = new THREE.Group();
-      const win = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.04), winMat);
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.06), frameMat);
-      frame.position.z = -0.01;
-      // cross
-      const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 0.07), frameMat);
-      const hbar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.07), frameMat);
-      grp.add(win, frame, vbar, hbar);
+      // Outer frame
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.06), frameMat);
+      frame.position.z = 0.01;
+      grp.add(frame);
+      // Window glass
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.025), winMat);
+      grp.add(win);
+      // 4-pane mullions (vertical + horizontal cross + another vertical for 3x2 panes)
+      const m1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.65, 0.04), frameMat);
+      grp.add(m1);
+      const m2 = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.04, 0.04), frameMat);
+      grp.add(m2);
+      const m3 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.65, 0.04), frameMat);
+      m3.position.x = -0.21;
+      grp.add(m3);
+      const m4 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.65, 0.04), frameMat);
+      m4.position.x = 0.21;
+      grp.add(m4);
+      // Window sill (a tiny ledge below)
+      const sill = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.18), sillMat);
+      sill.position.set(0, -0.45, 0.05);
+      grp.add(sill);
+      // Shutters on either side
+      if (withShutters) {
+        const sh1 = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.7, 0.04), shutterMat);
+        sh1.position.set(-0.6, 0, 0.005);
+        grp.add(sh1);
+        // Shutter slats (horizontal lines)
+        for (let s = 0; s < 3; s++) {
+          const slat = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.04, 0.045), frameMat);
+          slat.position.set(-0.6, -0.22 + s * 0.22, 0.025);
+          grp.add(slat);
+        }
+        const sh2 = sh1.clone();
+        sh2.position.x = 0.6;
+        grp.add(sh2);
+        for (let s = 0; s < 3; s++) {
+          const slat2 = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.04, 0.045), frameMat);
+          slat2.position.set(0.6, -0.22 + s * 0.22, 0.025);
+          grp.add(slat2);
+        }
+      }
       grp.position.set(x, y, z);
       grp.rotation.y = rotY;
       building.add(grp);
     };
     // Front windows
-    placeWindow(-w/2 + 0.9, 1.2, d/2 + 0.04, 0);
-    placeWindow(w/2 - 0.9, 1.2, d/2 + 0.04, 0);
-    // Side windows
-    placeWindow(w/2 + 0.04, 1.2, -d/4, Math.PI / 2);
-    placeWindow(w/2 + 0.04, 1.2, d/4, Math.PI / 2);
-    placeWindow(-w/2 - 0.04, 1.2, -d/4, -Math.PI / 2);
-    placeWindow(-w/2 - 0.04, 1.2, d/4, -Math.PI / 2);
+    placeWindow(-w/2 + 1.0, 1.3, d/2 + 0.04, 0);
+    placeWindow(w/2 - 1.0, 1.3, d/2 + 0.04, 0);
+    // Side windows (no shutters on sides to save poly count)
+    placeWindow(w/2 + 0.04, 1.3, -d/4, Math.PI / 2, false);
+    placeWindow(w/2 + 0.04, 1.3, d/4, Math.PI / 2, false);
+    placeWindow(-w/2 - 0.04, 1.3, -d/4, -Math.PI / 2, false);
+    placeWindow(-w/2 - 0.04, 1.3, d/4, -Math.PI / 2, false);
   }
 
   _makePlayerHouse() {
@@ -190,9 +312,9 @@ export class Buildings {
 
     // Mailbox in front (toward plaza)
     const mb = new THREE.Group();
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), new THREE.MeshStandardMaterial({ color: 0x8a5a3a }));
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a }));
     post.position.y = 0.5;
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.55), new THREE.MeshStandardMaterial({ color: 0xd63a2c }));
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.55), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xd63a2c }));
     box.position.set(0, 1.05, 0.05);
     mb.add(post, box);
     mb.position.set(0, g.position.y, 10 - 2.3);
@@ -211,8 +333,8 @@ export class Buildings {
     this.list.push(g);
 
     // Picket fence — continuous ring with two stringers and vertical pickets.
-    const fenceMat = new THREE.MeshStandardMaterial({ color: 0xeacfa8, roughness: 0.85 });
-    const darkMat = new THREE.MeshStandardMaterial({ color: 0xa8845a, roughness: 0.85 });
+    const fenceMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xeacfa8 });
+    const darkMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xa8845a });
     const r = 4.0;
     const sides = 32; // smoother ring, no visible segment seams
     // Sample evenly-spaced points around the ring
@@ -259,14 +381,14 @@ export class Buildings {
   _makeShop(pos, name, roofColor, wallColor) {
     const g = this._makeBuildingShell(6.0, 4.5, wallColor, roofColor);
     // Awning
-    const awningMat = new THREE.MeshStandardMaterial({ color: 0xff5e5e, roughness: 0.8 });
+    const awningMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xff5e5e });
     const awning = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.12, 1.2), awningMat);
     awning.position.set(0, 1.85, 2.65);
     awning.rotation.x = -Math.PI / 8;
     awning.castShadow = true;
     g.add(awning);
     // Awning stripes
-    const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+    const stripeMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff });
     for (let i = 0; i < 6; i++) {
       const s = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.13, 1.2), stripeMat);
       s.position.set(-2.5 + i, 1.86, 2.65);
@@ -276,7 +398,7 @@ export class Buildings {
     // Sign
     const signBg = new THREE.Mesh(
       new THREE.BoxGeometry(3.2, 0.8, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0x4a2a1a, roughness: 0.8 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a2a1a })
     );
     signBg.position.set(0, 2.4, 2.3);
     g.add(signBg);
@@ -301,7 +423,7 @@ export class Buildings {
   _makeMuseum(pos, name, roofColor, wallColor) {
     const g = this._makeBuildingShell(7.0, 5.0, wallColor, roofColor);
     // Columns at the front
-    const colMat = new THREE.MeshStandardMaterial({ color: 0xf2e0c0, roughness: 0.7 });
+    const colMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xf2e0c0 });
     for (let i = -1; i <= 1; i++) {
       const col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.0, 10), colMat);
       col.position.set(i * 2, 1.0, 2.55);
@@ -311,7 +433,7 @@ export class Buildings {
     // Pediment
     const pedi = new THREE.Mesh(
       new THREE.BoxGeometry(7.2, 0.2, 1.0),
-      new THREE.MeshStandardMaterial({ color: 0xeed7a8, roughness: 0.7 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xeed7a8 })
     );
     pedi.position.set(0, 2.1, 2.55);
     g.add(pedi);
@@ -337,7 +459,7 @@ export class Buildings {
     const pavTex = this._pavingTexture();
     const pav = new THREE.Mesh(
       new THREE.CircleGeometry(7, 32),
-      new THREE.MeshStandardMaterial({ map: pavTex, roughness: 0.9 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), map: pavTex })
     );
     pav.rotation.x = -Math.PI / 2;
     pav.position.y = 0.05;
@@ -349,7 +471,7 @@ export class Buildings {
     // Outer stone rim (octagonal)
     const rim = new THREE.Mesh(
       new THREE.CylinderGeometry(1.95, 1.95, 0.22, 8),
-      new THREE.MeshStandardMaterial({ color: 0xb8b6ad, roughness: 0.55 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xb8b6ad })
     );
     rim.position.y = 0.16;
     rim.castShadow = true; rim.receiveShadow = true;
@@ -357,7 +479,7 @@ export class Buildings {
     // Light-gray inner sleeve so the well reads as stone, not a chocolate well
     const basin = new THREE.Mesh(
       new THREE.CylinderGeometry(1.7, 1.7, 0.18, 20),
-      new THREE.MeshStandardMaterial({ color: 0xb8b6ad, roughness: 0.7 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xb8b6ad })
     );
     basin.position.y = 0.18;
     basin.castShadow = true;
@@ -365,7 +487,7 @@ export class Buildings {
     // Glowing blue water disc raised above the rim
     const water = new THREE.Mesh(
       new THREE.CylinderGeometry(1.55, 1.55, 0.04, 24),
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
         color: 0x9ed4f0, roughness: 0.2, metalness: 0.0,
         emissive: 0x6abee5, emissiveIntensity: 0.5,
       })
@@ -376,7 +498,7 @@ export class Buildings {
     // Bumped radius and raised Y so it visibly crowns above the inner sleeve.
     const mound = new THREE.Mesh(
       new THREE.SphereGeometry(1.1, 18, 14),
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
         color: 0xb8e4ff, roughness: 0.15, metalness: 0.0,
         emissive: 0x7acaf0, emissiveIntensity: 0.4,
       })
@@ -387,7 +509,7 @@ export class Buildings {
     // Outer ring of cascading water at the rim — TorusGeometry instead of disc.
     const waterRing = new THREE.Mesh(
       new THREE.TorusGeometry(1.55, 0.1, 12, 24),
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
         color: 0xb8e4ff, roughness: 0.2, metalness: 0.0,
         emissive: 0x6abee5, emissiveIntensity: 0.5,
       })
@@ -398,7 +520,7 @@ export class Buildings {
     // Central pillar (thicker)
     const pillar = new THREE.Mesh(
       new THREE.CylinderGeometry(0.35, 0.45, 1.2, 12),
-      new THREE.MeshStandardMaterial({ color: 0xc4c2b8, roughness: 0.6 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xc4c2b8 })
     );
     pillar.position.y = 1.05;
     pillar.castShadow = true;
@@ -406,7 +528,7 @@ export class Buildings {
     // Top "urn" bowl (bigger)
     const urn = new THREE.Mesh(
       new THREE.CylinderGeometry(0.7, 0.4, 0.55, 14),
-      new THREE.MeshStandardMaterial({ color: 0xc4c2b8, roughness: 0.55 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xc4c2b8 })
     );
     urn.position.y = 1.85;
     urn.castShadow = true;
@@ -424,7 +546,7 @@ export class Buildings {
     for (let i = 0; i < 18; i++) {
       const drop = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 6, 4),
-        new THREE.MeshStandardMaterial({
+        new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
           color: 0xdff2ff, transparent: true, opacity: 0.85, emissive: 0x7acaf0, emissiveIntensity: 0.6,
         })
       );
@@ -434,21 +556,27 @@ export class Buildings {
       this.fountainDroplets.push(drop);
     }
     // Plaza lanterns — 4 short posts around the fountain
-    const lanternMat = new THREE.MeshStandardMaterial({
+    const lanternMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       color: 0xffe9b6, emissive: 0xffd56e, emissiveIntensity: 0.5, roughness: 0.7,
     });
+    this.lanternLights = [];
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
       const post = new THREE.Group();
       const pole = new THREE.Mesh(
         new THREE.CylinderGeometry(0.06, 0.06, 0.9, 8),
-        new THREE.MeshStandardMaterial({ color: 0x4a3a25, roughness: 0.8 })
+        new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a3a25 })
       );
       pole.position.y = 0.45;
       post.add(pole);
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), lanternMat);
       lamp.position.y = 0.95;
       post.add(lamp);
+      // Point light bulb — warms the plaza at night
+      const bulb = new THREE.PointLight(0xffcb6b, 0.0, 6.0, 2.0);
+      bulb.position.y = 0.95;
+      post.add(bulb);
+      this.lanternLights.push(bulb);
       post.position.set(Math.cos(a) * 3.5, 0, Math.sin(a) * 3.5);
       fount.add(post);
     }
@@ -456,7 +584,7 @@ export class Buildings {
     g.add(fount);
 
     // Benches around the plaza
-    const benchMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3a, roughness: 0.85 });
+    const benchMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
     const bench = (x, z, ry) => {
       const b = new THREE.Group();
       const seat = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 0.5), benchMat);
@@ -489,7 +617,7 @@ export class Buildings {
   _makeSignpost() {
     const post = new THREE.Mesh(
       new THREE.CylinderGeometry(0.07, 0.07, 1.6, 8),
-      new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 0.9 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a })
     );
     post.position.set(8, this.world.heightAt(8, -3) + 0.8, -3);
     post.castShadow = true;
@@ -547,10 +675,19 @@ export class Buildings {
         );
       }
     }
-    // Lantern flicker at night (subtle intensity wobble)
-    if (time.lightLevel < 0.4) {
-      for (const b of this.list) {
-        // no-op for now, future: window glow pulse
+    // Lantern PointLights flicker at dusk / night — they fade in then wobble.
+    if (this.lanternLights) {
+      // Night-only: 0 during full day, ramps up after hour 17, full after 19
+      const h = time.hour;
+      let base;
+      if (h < 5 || h >= 21) base = 1.0;
+      else if (h < 7) base = (h - 5) / 2 * 0.5;
+      else if (h >= 17 && h < 19) base = (h - 17) / 2;
+      else if (h >= 19 && h < 21) base = 1.0;
+      else base = 0;
+      const flicker = 1 + Math.sin(time.t * 5.3) * 0.05 + Math.sin(time.t * 11.1) * 0.03;
+      for (const bulb of this.lanternLights) {
+        bulb.intensity = base * 1.6 * flicker;
       }
     }
   }

@@ -16,6 +16,8 @@ import { Particles } from './particles.js';
 import { Weather } from './weather.js';
 import { Interiors } from './interiors.js';
 import { Cutscene } from './cutscene.js';
+import { outlineScene } from './outliner.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 class Game {
   constructor() {
@@ -97,6 +99,15 @@ class Game {
     const cutscene = new Cutscene();
     this.modules.cutscene = cutscene;
 
+    // Phase 2: HDRI environment for IBL on any remaining PBR materials
+    this._setupEnvironment();
+
+    // Cel-shading outline pass — once everything is in the scene
+    outlineScene(this.scene, { thickness: 0.035, skipBelow: 0.05 });
+
+    // Phase 2: HDRI for IBL lighting (procedural fallback if .hdr missing)
+    this._setupEnvironment();
+
     // Camera follows the player
     this.cameraTarget = new THREE.Vector3();
 
@@ -106,11 +117,58 @@ class Game {
     villagers.spawn();
     player.spawn(new THREE.Vector3(0, 0, 4));
 
+    // Cel-shading outline pass — runs AFTER all meshes are spawned
+    const added = outlineScene(this.scene, { thickness: 0.06, skipBelow: 0.02 });
+    console.log('[outliner] added', added, 'outlines');
+
     // Sync initial state to UI
     ui.refresh();
 
     this.running = true;
     this.loop();
+  }
+
+  _setupEnvironment() {
+    // Try to load PolyHaven HDRI as scene.environment for IBL on PBR materials.
+    // Falls back to a 4-color gradient cube map if loading fails.
+    const HDR_URL = 'assets/hdri/sky.hdr';
+    new RGBELoader().load(HDR_URL, (hdr) => {
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      this.scene.environment = hdr;
+      // Dial back so it doesn't wash out our cel-shaded colors
+      if ('environmentIntensity' in this.scene) {
+        this.scene.environmentIntensity = 0.35;
+      }
+      console.log('[env] HDRI loaded for IBL');
+    }, undefined, (err) => {
+      console.warn('[env] HDRI failed, using procedural fallback', err?.message || err);
+      this._installProceduralEnvironment();
+    });
+  }
+
+  _installProceduralEnvironment() {
+    // 6-face cube map: peach top, blue sides, green ground
+    const makeFace = (color) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 16;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 16, 16);
+      return c;
+    };
+    const faces = [
+      makeFace('#cfe9f5'), // +X
+      makeFace('#cfe9f5'), // -X
+      makeFace('#ffe4b8'), // +Y peach top
+      makeFace('#8a6a4a'), // -Y ground
+      makeFace('#cfe9f5'), // +Z
+      makeFace('#cfe9f5'), // -Z
+    ];
+    const cube = new THREE.CubeTexture(faces);
+    cube.needsUpdate = true;
+    cube.colorSpace = THREE.SRGBColorSpace;
+    this.scene.environment = cube;
+    if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = 0.5;
   }
 
   // Re-init from a clean state — used when exiting an interior.

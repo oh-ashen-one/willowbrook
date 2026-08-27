@@ -254,6 +254,23 @@
   </section>
 
   <section class="wave">
+    <h2>Wave 5 — AC: New Horizons visuals <span class="badge crit">critic: PASS</span></h2>
+    <p>Six phases of visuals work — no downloaded assets, all procedural. Cel-shading pipeline (<code>MeshToonMaterial</code> + 3-step <code>gradientMap</code> + black inverted-hull outline pass). PolyHaven HDRI for IBL (700 KB kloofendal_misty_morning, <code>environmentIntensity = 0.35</code> so it doesn't wash out the cel palette). Six distinct tree species — oak, cedar (stacked cones), spring, autumn (lobed canopy + fruits), fruit (visible red apples), birch (slim + pendant canopy). AC cottages: plank siding + eave trim + 1.0-unit overhang + ridge cap + brick chimney; recessed doors with brass doorknob + stepping stone; 4-pane mullion windows + sill + slatted shutters; red+white awning on the apothecary. Player avatar: backpack + belt + brass buckle + hair tufts + eyes + hands + shoes. NPCs split into species body builders (<code>_buildBear</code>, <code>_buildFrog</code>, <code>_buildOctopus</code>, <code>_buildSquirrel</code>) with shared <code>_darken</code>/<code>_lighten</code> palette helpers. Polish: 220 wind-swayed grass tufts, 48-stone dirt path from south shore to plaza fountain, four lantern <code>PointLight</code>s that ramp in 17:00–19:00 with a 5.3 Hz × 11.1 Hz flicker, starfield bumped 1,400 → 2,000.</p>
+
+    <div class="grid">
+      <div class="shot"><img src=".critique/shots/w4-noon-plaza.jpg" alt=""><div class="label">Noon plaza · cel + outline + path</div></div>
+      <div class="shot"><img src=".critique/shots/w4-shop-interior.jpg" alt=""><div class="label">Shop interior · unchanged</div></div>
+      <div class="shot"><img src=".critique/shots/w4-fountain.png" alt=""><div class="label">Fountain · AC dome</div></div>
+      <div class="shot"><img src=".critique/shots/w4-dawn-river.png" alt=""><div class="label">Dawn · peach band</div></div>
+      <div class="shot"><img src=".critique/shots/w4-dusk-river.png" alt=""><div class="label">Dusk · rose band</div></div>
+      <div class="shot"><img src=".critique/shots/w3-night.png" alt=""><div class="label">Night · lantern glow</div></div>
+      <div class="shot"><img src=".critique/shots/w4-midday.png" alt=""><div class="label">Midday · full village</div></div>
+    </div>
+
+    <div class="critique"><strong>Critic wave-4:</strong> PASS — cel shading reads, outlines wrap every cottage/fence/tree/NPC, six tree species distinct at a glance, cottages have eaves + shutters + chimney, player reads with backpack, bear villager visible at a glance, lantern PointLights ramp in at dusk, no console errors on load. <a href=".critique/wave-4-critique.md" style="color:var(--accent)">.critique/wave-4-critique.md</a></div>
+  </section>
+
+  <section class="wave">
     <h2>Wave 5 — Polish + movement <span class="badge pending">queued</span></h2>
     <p>Walk inside interiors (camera follows the player). Door exit to outside via E. Footstep particles per surface. Tree leaves drift. Butterflies react when player walks past. Soft camera shake on tool use. Footstep pitch shifts with surface (grass vs wood vs stone).</p>
   </section>

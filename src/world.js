@@ -2,6 +2,7 @@
 // One module, one job: make the world feel alive and walkable.
 
 import * as THREE from 'three';
+import { gradientMap } from './toon.js';
 
 const COLORS = {
   grassA: 0x6fbf5a,
@@ -36,6 +37,8 @@ export class World {
     this.trees = [];
     this.flowers = [];
     this.rocks = [];
+    this.grassTufts = [];
+    this.pathGroup = null;
     this.heightAt = this._buildHeightField();
   }
 
@@ -69,6 +72,8 @@ export class World {
     this._buildSkyDome();
     this._buildClouds();
     this._plantTrees();
+    this._paintPath();
+    this._plantGrassTufts();
     this._plantFlowers();
     this._placeRocks();
     this._addAmbientCreatures();
@@ -182,7 +187,7 @@ export class World {
     }
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       vertexColors: true,
       roughness: 1.0,
       metalness: 0.0,
@@ -199,7 +204,7 @@ export class World {
     // River/pond on the south edge.
     const waterGeom = new THREE.PlaneGeometry(60, 22, 32, 16);
     waterGeom.rotateX(-Math.PI / 2);
-    const waterMat = new THREE.MeshStandardMaterial({
+    const waterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       color: COLORS.water,
       roughness: 0.25,
       metalness: 0.0,
@@ -217,7 +222,7 @@ export class World {
     for (let i = 0; i < 18; i++) {
       const r = 0.18 + this.rng() * 0.45;
       const g = new THREE.DodecahedronGeometry(r, 0);
-      const m = new THREE.MeshStandardMaterial({ color: COLORS.rock, roughness: 0.9, flatShading: true });
+      const m = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: COLORS.rock });
       const rock = new THREE.Mesh(g, m);
       const x = (this.rng() - 0.5) * 50;
       const z = -28 + (this.rng() - 0.5) * 16;
@@ -255,10 +260,24 @@ export class World {
   _plantTrees() {
     // Available tree types with seasonal palettes.
     const treeTypes = [
-      { trunkColor: 0x6a3a20, leavesColor: 0x4f9c45, leavesAlt: 0x3d7e35, height: 2.6, canopyScale: 1.3, type: 'oak' },
-      { trunkColor: 0x8a5a30, leavesColor: 0xa6d97e, leavesAlt: 0xb9e88f, height: 2.0, canopyScale: 1.0, type: 'spring' },
-      { trunkColor: 0x5a3a20, leavesColor: 0x3d7e35, leavesAlt: 0x4f9c45, height: 3.2, canopyScale: 1.5, type: 'cedar' },
-      { trunkColor: 0x7a4a28, leavesColor: 0xd68a4c, leavesAlt: 0xc4743c, height: 2.4, canopyScale: 1.2, type: 'autumn' },
+      // OAK — wide low canopy, stocky trunk, big side lobes (classic AC hardwood)
+      { trunkColor: 0x6a3a20, leavesColor: 0x6fbf5a, leavesAlt: 0x4f9c45, leavesDark: 0x3d7e35,
+        height: 2.6, canopyScale: 1.5, trunkH: 1.3, type: 'oak' },
+      // CEDAR/PINE — tall narrow, stacked triangular tiers, dark green
+      { trunkColor: 0x5a3a20, leavesColor: 0x3d7e35, leavesAlt: 0x4a8a45, leavesDark: 0x2a5a25,
+        height: 3.6, canopyScale: 0.8, trunkH: 2.4, type: 'cedar' },
+      // SPRING — bright fresh green, medium canopy, gentle
+      { trunkColor: 0x8a5a30, leavesColor: 0xb6e89c, leavesAlt: 0xc6f4ac, leavesDark: 0x8ac870,
+        height: 2.4, canopyScale: 1.2, trunkH: 1.6, type: 'spring' },
+      // AUTUMN — orange/red leaves, denser foliage
+      { trunkColor: 0x7a4a28, leavesColor: 0xd68a4c, leavesAlt: 0xc4743c, leavesDark: 0x9a5a2a,
+        height: 2.6, canopyScale: 1.3, trunkH: 1.4, type: 'autumn' },
+      // FRUIT — small dense canopy with visible round fruits
+      { trunkColor: 0x6a4a30, leavesColor: 0x6fbf5a, leavesAlt: 0x5fa84a, leavesDark: 0x3d7e35,
+        height: 2.2, canopyScale: 1.0, trunkH: 1.0, type: 'fruit' },
+      // BIRCH — slim trunk, tall and narrow, lighter leaves
+      { trunkColor: 0xeae0c8, leavesColor: 0x9ed47a, leavesAlt: 0xc6e89c, leavesDark: 0x6fa84a,
+        height: 3.4, canopyScale: 0.7, trunkH: 2.6, type: 'birch' },
     ];
 
     const placements = [];
@@ -292,99 +311,299 @@ export class World {
   _makeTree(type) {
     const group = new THREE.Group();
 
-    // Trunk — shorter and chunkier so the canopy reads as a wide broccoli cloud
-    const trunkH = type.type === 'cedar' ? 2.0 : 1.4;
-    const trunkRTop = 0.22, trunkRBot = 0.34;
-    const trunkG = new THREE.CylinderGeometry(trunkRTop, trunkRBot, trunkH, 7);
-    const trunkM = new THREE.MeshStandardMaterial({ color: type.trunkColor, roughness: 0.95, flatShading: true });
+    // Shared trunk material
+    const trunkM = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: type.trunkColor });
+
+    // === Trunk — varies by species ===
+    const trunkH = type.trunkH;
+    const trunkRTaper = type.type === 'birch' ? 0.10 : 0.18;
+    const trunkRBase = type.type === 'birch' ? 0.14 : (type.type === 'cedar' ? 0.20 : 0.32);
+    const trunkG = new THREE.CylinderGeometry(trunkRTaper, trunkRBase, trunkH, 8);
     const trunk = new THREE.Mesh(trunkG, trunkM);
     trunk.position.y = trunkH / 2;
     trunk.castShadow = true; trunk.receiveShadow = true;
     group.add(trunk);
 
-    // Root blobs
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2 + this.rng() * 0.6;
+    // Root blobs at the base — give it character
+    const rootCount = type.type === 'birch' ? 0 : 3;
+    for (let i = 0; i < rootCount; i++) {
+      const a = (i / rootCount) * Math.PI * 2 + this.rng() * 0.5;
       const root = new THREE.Mesh(
         new THREE.SphereGeometry(0.32 + this.rng() * 0.08, 8, 6),
         trunkM
       );
-      root.position.set(Math.cos(a) * 0.26, 0.2, Math.sin(a) * 0.26);
+      root.position.set(Math.cos(a) * 0.28, 0.18, Math.sin(a) * 0.28);
       root.scale.y = 0.65;
-      root.castShadow = true; root.receiveShadow = true;
+      root.castShadow = true;
       group.add(root);
     }
 
-    // Canopy — wider, lower, with side lobes that spread laterally
-    const canopyMat = new THREE.MeshStandardMaterial({ color: type.leavesColor, roughness: 0.95, flatShading: false });
-    const canopyMatAlt = new THREE.MeshStandardMaterial({ color: type.leavesAlt, roughness: 0.95, flatShading: false });
-    const canopyMatDeep = new THREE.MeshStandardMaterial({ color: type.leavesDark ?? type.leavesColor, roughness: 0.95, flatShading: false });
-    const baseR = type.canopyScale * 1.25; // wider than before
-
-    // Main stacked body
-    const layers = type.type === 'cedar' ? 4 : 2;
-    for (let i = 0; i < layers; i++) {
-      const r = baseR * (1.0 - i * 0.16);
-      const g = new THREE.SphereGeometry(r, 12, 10);
-      const mat = i === 0 ? canopyMatDeep : (i % 2 === 1 ? canopyMat : canopyMatAlt);
-      const m = new THREE.Mesh(g, mat);
-      m.position.set(
-        (this.rng() - 0.5) * 0.3,
-        trunkH + i * 0.45 + 0.1,
-        (this.rng() - 0.5) * 0.3,
+    // === Branches — limbs sticking out of the trunk ===
+    // Each branch is a tapered cylinder reaching outward at an angle
+    const branchMat = trunkM;
+    const branches = [];
+    const branchCount = type.type === 'cedar' ? 0 : (type.type === 'birch' ? 2 : 4);
+    for (let i = 0; i < branchCount; i++) {
+      const a = (i / branchCount) * Math.PI * 2 + this.rng() * 0.4;
+      const branchLen = 0.7 + this.rng() * 0.5;
+      const branchR = 0.06 + this.rng() * 0.04;
+      const bg = new THREE.CylinderGeometry(branchR * 0.5, branchR, branchLen, 5);
+      const branch = new THREE.Mesh(bg, branchMat);
+      // Branch starts at trunk top, angles outward
+      const startY = trunkH * (0.55 + this.rng() * 0.35);
+      branch.position.set(
+        Math.cos(a) * branchLen * 0.4,
+        startY,
+        Math.sin(a) * branchLen * 0.4,
       );
-      m.scale.set(1 + this.rng() * 0.15, 0.7 + this.rng() * 0.2, 1 + this.rng() * 0.15);
-      m.castShadow = true; m.receiveShadow = true;
-      group.add(m);
-    }
-    // Side lobes — these spread the canopy outward
-    const lobeCount = 5;
-    for (let i = 0; i < lobeCount; i++) {
-      const a = (i / lobeCount) * Math.PI * 2 + this.rng() * 0.4;
-      const r = baseR * (1.0 + this.rng() * 0.15);
-      const g = new THREE.SphereGeometry(r * 0.6, 12, 10);
-      const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMat : canopyMatAlt);
-      m.position.set(
-        Math.cos(a) * (baseR * 0.65),
-        trunkH + 0.35 + this.rng() * 0.25,
-        Math.sin(a) * (baseR * 0.65),
-      );
-      m.castShadow = true; m.receiveShadow = true;
-      group.add(m);
-    }
-    // Crown blob at the very top
-    for (let i = 0; i < 2; i++) {
-      const g = new THREE.SphereGeometry(baseR * 0.45, 10, 8);
-      const m = new THREE.Mesh(g, i === 0 ? canopyMat : canopyMatAlt);
-      m.position.set(
-        (this.rng() - 0.5) * 0.4,
-        trunkH + layers * 0.45 + 0.25 + i * 0.2,
-        (this.rng() - 0.5) * 0.4,
-      );
-      m.castShadow = true; m.receiveShadow = true;
-      group.add(m);
+      // Tilt outward (rotate around z-axis perpendicular to angle)
+      const tilt = Math.PI / 4 + this.rng() * 0.3;
+      const rotZ = -Math.sin(a) * tilt;
+      const rotX = Math.cos(a) * tilt;
+      branch.rotation.set(rotX, 0, rotZ);
+      branch.castShadow = true;
+      group.add(branch);
+      branches.push({ x: Math.cos(a) * branchLen * 0.7, y: startY + 0.4, z: Math.sin(a) * branchLen * 0.7 });
     }
 
-    // Fruit chance — apples/oranges
-    if (this.rng() < 0.5) {
-      const fruitColor = type.type === 'autumn' ? 0xd63a2c : 0xffd56e;
-      const fruitMat = new THREE.MeshStandardMaterial({ color: fruitColor, roughness: 0.6 });
-      for (let i = 0; i < 6; i++) {
-        const f = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), fruitMat);
+    // === Canopy — species-specific silhouettes ===
+    const canopyMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: type.leavesColor });
+    const canopyMatAlt = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: type.leavesAlt });
+    const canopyMatDeep = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: type.leavesDark ?? type.leavesColor });
+
+    if (type.type === 'cedar') {
+      // Pine / cedar — tall conical tiers stacked
+      const tiers = 5;
+      for (let i = 0; i < tiers; i++) {
+        const t = i / (tiers - 1);
+        const r = (1.5 - t * 1.0) * type.canopyScale;
+        const g = new THREE.ConeGeometry(r, r * 0.9, 8);
+        const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMatDeep : canopyMat);
+        m.position.y = trunkH + 0.3 + i * (r * 0.55);
+        m.castShadow = true; m.receiveShadow = true;
+        group.add(m);
+      }
+    } else if (type.type === 'birch') {
+      // Birch — slim drooping canopy with sparse leaf clusters
+      const clusterCount = 6;
+      for (let i = 0; i < clusterCount; i++) {
         const a = this.rng() * Math.PI * 2;
-        const r = (0.9 + this.rng() * 0.4) * type.canopyScale;
-        f.position.set(
-          Math.cos(a) * r,
-          trunkH + 0.5 + (this.rng() - 0.5) * 0.8,
-          Math.sin(a) * r,
+        const y = trunkH + this.rng() * 1.0;
+        const r = (0.5 + this.rng() * 0.3) * type.canopyScale;
+        const g = new THREE.SphereGeometry(r, 8, 6);
+        const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMat : canopyMatAlt);
+        m.position.set(Math.cos(a) * 0.3, y, Math.sin(a) * 0.3);
+        m.scale.y = 0.7;
+        m.castShadow = true;
+        group.add(m);
+      }
+      // Drooping branches at the bottom of the canopy
+      for (let i = 0; i < 3; i++) {
+        const a = this.rng() * Math.PI * 2;
+        const drip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.6, 4), trunkM);
+        drip.position.set(Math.cos(a) * 0.4, trunkH - 0.2, Math.sin(a) * 0.4);
+        drip.rotation.z = (Math.random() - 0.5) * 0.4;
+        drip.rotation.x = (Math.random() - 0.5) * 0.4;
+        group.add(drip);
+      }
+    } else if (type.type === 'fruit') {
+      // Fruit tree — small dense canopy with VISIBLE fruits
+      // Main canopy blob
+      const g = new THREE.SphereGeometry(type.canopyScale * 0.9, 10, 8);
+      const m = new THREE.Mesh(g, canopyMat);
+      m.position.y = trunkH + 0.5;
+      m.scale.set(1.1, 0.85, 1.1);
+      m.castShadow = true; m.receiveShadow = true;
+      group.add(m);
+      // Smaller bumps around it
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const bump = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), canopyMatAlt);
+        bump.position.set(Math.cos(a) * 0.5, trunkH + 0.5 + (this.rng() - 0.5) * 0.3, Math.sin(a) * 0.5);
+        bump.castShadow = true;
+        group.add(bump);
+      }
+      // Fruits — many visible red apples
+      const fruitColor = 0xd63a2c;
+      const fruitMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: fruitColor });
+      for (let i = 0; i < 14; i++) {
+        const a = this.rng() * Math.PI * 2;
+        const r = 0.6 + this.rng() * 0.5;
+        const y = trunkH + 0.3 + this.rng() * 0.8;
+        const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), fruitMat);
+        fruit.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+        fruit.castShadow = true;
+        group.add(fruit);
+      }
+    } else {
+      // Oak / spring / autumn — wide lobed canopy with side lobes
+      const baseR = type.canopyScale * 1.25;
+      const layers = 2;
+      for (let i = 0; i < layers; i++) {
+        const r = baseR * (1.0 - i * 0.18);
+        const g = new THREE.SphereGeometry(r, 12, 10);
+        const mat = i === 0 ? canopyMatDeep : (i % 2 === 1 ? canopyMat : canopyMatAlt);
+        const m = new THREE.Mesh(g, mat);
+        m.position.set(
+          (this.rng() - 0.5) * 0.3,
+          trunkH + i * 0.5 + 0.1,
+          (this.rng() - 0.5) * 0.3,
         );
-        group.add(f);
+        m.scale.set(1 + this.rng() * 0.15, 0.75 + this.rng() * 0.2, 1 + this.rng() * 0.15);
+        m.castShadow = true; m.receiveShadow = true;
+        group.add(m);
+      }
+      // Side lobes
+      const lobeCount = 6;
+      for (let i = 0; i < lobeCount; i++) {
+        const a = (i / lobeCount) * Math.PI * 2 + this.rng() * 0.4;
+        const r = baseR * (0.55 + this.rng() * 0.2);
+        const g = new THREE.SphereGeometry(r, 10, 8);
+        const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMat : canopyMatAlt);
+        m.position.set(
+          Math.cos(a) * (baseR * 0.6),
+          trunkH + 0.35 + this.rng() * 0.35,
+          Math.sin(a) * (baseR * 0.6),
+        );
+        m.castShadow = true;
+        group.add(m);
+      }
+      // Crown blob at the very top
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(baseR * 0.5, 10, 8), canopyMat);
+      crown.position.set(
+        (this.rng() - 0.5) * 0.3,
+        trunkH + layers * 0.5 + 0.3,
+        (this.rng() - 0.5) * 0.3,
+      );
+      crown.castShadow = true;
+      group.add(crown);
+
+      // Leaf clusters at branch tips — small tight spheres
+      for (const b of branches) {
+        const leafR = 0.25 + this.rng() * 0.15;
+        const cluster = new THREE.Mesh(new THREE.SphereGeometry(leafR, 8, 6), canopyMatAlt);
+        cluster.position.set(b.x, b.y + 0.1, b.z);
+        cluster.castShadow = true;
+        group.add(cluster);
+        // Tiny accent
+        if (this.rng() < 0.5) {
+          const accent = new THREE.Mesh(new THREE.SphereGeometry(leafR * 0.7, 8, 6), canopyMatDeep);
+          accent.position.set(b.x + 0.1, b.y + 0.2, b.z + 0.1);
+          accent.castShadow = true;
+          group.add(accent);
+        }
+      }
+
+      // Random fruit on oak/autumn trees (apples / orange)
+      if (type.type === 'autumn' || (type.type === 'oak' && this.rng() < 0.3)) {
+        const fruitColor = type.type === 'autumn' ? 0xff8a3a : 0xd63a2c;
+        const fruitMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: fruitColor });
+        for (let i = 0; i < 5; i++) {
+          const a = this.rng() * Math.PI * 2;
+          const r = 0.8 + this.rng() * 0.5;
+          const fr = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), fruitMat);
+          fr.position.set(Math.cos(a) * r, trunkH + 0.4 + this.rng() * 0.6, Math.sin(a) * r);
+          group.add(fr);
+        }
       }
     }
 
     group.userData.isTree = true;
     group.userData.canShake = true;
+    group.userData.treeType = type.type;
     return group;
+  }
+
+  _paintPath() {
+    // Winding dirt footpath from the south shore up to the plaza fountain.
+    // Each segment is a flat ring; together they form an organic curve.
+    this.pathGroup = new THREE.Group();
+    const pathMat = new THREE.MeshToonMaterial({
+      gradientMap: gradientMap(3),
+      color: 0xb89a6a,
+    });
+    const pathEdge = new THREE.MeshToonMaterial({
+      gradientMap: gradientMap(3),
+      color: 0x8a6f48,
+    });
+    // Walk along a smooth arc from (4, -52) up to near (1, -3) (plaza edge).
+    const steps = 48;
+    const prev = new THREE.Vector3();
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      // Quadratic curve with gentle S-bend
+      const x = 4 + Math.sin(t * Math.PI * 1.4) * 2 - t * 3;
+      const z = -52 + t * 49;
+      const y = this.heightAt(x, z) + 0.02;
+      // Stepping-stone style: small irregular plates
+      const w = 1.6 + Math.sin(t * 7.3) * 0.25;
+      const l = 1.1 + Math.cos(t * 5.1) * 0.2;
+      const stone = new THREE.Mesh(
+        new THREE.BoxGeometry(w, 0.04, l),
+        i % 3 === 0 ? pathEdge : pathMat
+      );
+      stone.position.set(x, y, z);
+      stone.rotation.y = Math.sin(t * 3.7) * 0.3;
+      stone.receiveShadow = true;
+      this.pathGroup.add(stone);
+      // Tiny pebbles alongside for organic feel
+      if (i % 2 === 0) {
+        for (let k = 0; k < 3; k++) {
+          const px = x + (Math.random() - 0.5) * 2.6;
+          const pz = z + (Math.random() - 0.5) * 2.0;
+          const py = this.heightAt(px, pz) + 0.03;
+          const peb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05 + Math.random() * 0.05, 5, 4),
+            pathMat
+          );
+          peb.position.set(px, py, pz);
+          this.pathGroup.add(peb);
+        }
+      }
+    }
+    this.scene.add(this.pathGroup);
+  }
+
+  _plantGrassTufts() {
+    // Small grass blade clusters scattered across the terrain.
+    // Each tuft is 4-6 crossed planes for an AC-style grass feel.
+    const grassColors = [0x6fbf5a, 0x8fd17a, 0x4f9c45, 0xa3d96e];
+    const tufts = 220;
+    for (let i = 0; i < tufts; i++) {
+      const x = (this.rng() - 0.5) * (this.size - 14);
+      const z = (this.rng() - 0.5) * (this.size - 18);
+      // Skip the central plaza area to keep the path clean
+      if (Math.abs(x) < 4 && z > -8 && z < 8) continue;
+      // Skip the dock / south beach to keep that water edge clean
+      if (z < -22 && z > -54 && Math.abs(x) < 30) continue;
+      const tuft = new THREE.Group();
+      const blades = 3 + Math.floor(this.rng() * 4);
+      const baseColor = grassColors[Math.floor(this.rng() * grassColors.length)];
+      for (let b = 0; b < blades; b++) {
+        const h = 0.18 + this.rng() * 0.18;
+        const blade = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.06, h),
+          new THREE.MeshToonMaterial({
+            gradientMap: gradientMap(3),
+            color: baseColor,
+            side: THREE.DoubleSide,
+          })
+        );
+        blade.position.set(
+          (this.rng() - 0.5) * 0.18,
+          h / 2,
+          (this.rng() - 0.5) * 0.18
+        );
+        blade.rotation.y = this.rng() * Math.PI;
+        tuft.add(blade);
+      }
+      const y = this.heightAt(x, z);
+      tuft.position.set(x, y, z);
+      tuft.userData.baseY = y;
+      tuft.userData.phase = this.rng() * Math.PI * 2;
+      this.scene.add(tuft);
+      this.grassTufts.push(tuft);
+    }
   }
 
   _plantFlowers() {
@@ -409,13 +628,13 @@ export class World {
     const g = new THREE.Group();
     const stem = new THREE.Mesh(
       new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4),
-      new THREE.MeshStandardMaterial({ color: 0x4f9c45 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4f9c45 })
     );
     stem.position.y = 0.15;
     g.add(stem);
     const petal = new THREE.Mesh(
       new THREE.SphereGeometry(0.09, 6, 6),
-      new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.7 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: colorHex })
     );
     petal.position.y = 0.32;
     petal.scale.y = 0.5;
@@ -428,7 +647,7 @@ export class World {
     for (let i = 0; i < 24; i++) {
       const r = 0.25 + this.rng() * 0.7;
       const g = new THREE.DodecahedronGeometry(r, 0);
-      const m = new THREE.MeshStandardMaterial({ color: COLORS.rock, roughness: 0.95, flatShading: true });
+      const m = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: COLORS.rock });
       const rock = new THREE.Mesh(g, m);
       const x = (this.rng() - 0.5) * (this.size - 12);
       const z = (this.rng() - 0.5) * (this.size - 18);
@@ -533,6 +752,13 @@ export class World {
     for (const t of this.trees) {
       t.rotation.z = Math.sin(time.t * 0.8 + t.position.x) * sway;
       t.rotation.x = Math.cos(time.t * 0.6 + t.position.z) * sway;
+    }
+    // Grass tufts rustle in the same breeze (each on its own phase)
+    const grassSway = 0.04 + time.lightLevel * 0.05;
+    for (const tuft of this.grassTufts) {
+      const p = tuft.userData;
+      tuft.rotation.z = Math.sin(time.t * 1.4 + p.phase) * grassSway;
+      tuft.rotation.x = Math.cos(time.t * 1.1 + p.phase) * grassSway * 0.7;
     }
   }
 
@@ -640,7 +866,7 @@ export class World {
   }
 
   _buildStarfield() {
-    const count = 1400;
+    const count = 2000;
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
