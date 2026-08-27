@@ -8,40 +8,66 @@ const VILLAGER_DEFS = [
   {
     name: 'Maple', species: 'bear',
     palette: { fur: 0xc89060, snout: 0xeac098, shirt: 0xe65a5a },
-    home: 'oak', schedule: { wake: 6, nap: 13, sleep: 22 },
+    home: 'oak',
+    birthday: 'Spring 17',
+    favoriteGift: 'flower',
+    schedule: { wake: 6, plazaHour: 10, eveningHour: 17, sleep: 22 },
     greeting: ['Hey neighbor!', 'What a lovely morning, huh?', 'Catch any fish lately?', 'I baked cookies — want one?'],
+    anecdote: ['I tried a new muffin recipe this morning.', 'The plaza fountain was sparkling at dawn.'],
+    insideJoke: ['Remember when you mistook my hat for a beehive?'],
+    invite: ['Come by tonight — I\'m baking a pie.'],
     hobby: 'baking',
   },
   {
     name: 'Finn', species: 'frog',
     palette: { fur: 0x9bd15e, snout: 0xc7e89a, shirt: 0xffd54f },
     home: 'lily',
-    schedule: { wake: 7, nap: 14, sleep: 23 },
+    birthday: 'Summer 4',
+    favoriteGift: 'bug',
+    schedule: { wake: 7, plazaHour: 9, eveningHour: 17, sleep: 23 },
     greeting: ['Ribbit! Hi hi!', 'The river is so nice today.', 'Did you bring me a bug?', 'Plop plop!'],
+    anecdote: ['A dragonfly landed on my nose yesterday.'],
+    insideJoke: ['You still owe me a beetle for the race.'],
+    invite: ['Dinner at the lily pad — bring your appetite.'],
     hobby: 'fishing',
   },
   {
     name: 'Pebble', species: 'cub',
     palette: { fur: 0xa88860, snout: 0xd4b78a, shirt: 0x6b9bd1 },
     home: 'cedar',
-    schedule: { wake: 6, nap: 12, sleep: 21 },
+    birthday: 'Spring 28',
+    favoriteGift: 'fossil',
+    schedule: { wake: 6, plazaHour: 11, eveningHour: 16, sleep: 21 },
     greeting: ['Welcome home!', 'I was just thinking about you.', 'Wanna dig for fossils?', 'It feels so good outside.'],
+    anecdote: ['I found a trilobite-shaped pebble today.'],
+    insideJoke: ['You still pretend you don\'t like mud.'],
+    invite: ['Sleepover at mine — I have extra blankets.'],
     hobby: 'fossils',
   },
   {
     name: 'Coral', species: 'octopus',
     palette: { fur: 0xff8aa8, snout: 0xffd0e0, shirt: 0x7cc6e0 },
     home: 'shell',
-    schedule: { wake: 8, nap: 15, sleep: 24 },
+    birthday: 'Autumn 9',
+    favoriteGift: 'shell',
+    schedule: { wake: 8, plazaHour: 13, eveningHour: 18, sleep: 24 },
     greeting: ['Hi sweetie!', 'The stars were pretty last night.', 'I made a sand castle today.', 'Come swim with me!'],
+    anecdote: ['A conch shell hummed at low tide.'],
+    insideJoke: ['You still owe me a rematch at chess.'],
+    invite: ['Midnight swim at the shore — just us.'],
     hobby: 'sea',
   },
   {
     name: 'Hazel', species: 'squirrel',
     palette: { fur: 0xc06a3a, snout: 0xeab084, shirt: 0x9a6bd1 },
     home: 'acorn',
-    schedule: { wake: 5, nap: 13, sleep: 22 },
+    birthday: 'Autumn 23',
+    favoriteGift: 'acorn',
+    schedule: { wake: 5, plazaHour: 9, eveningHour: 17, sleep: 22 },
     greeting: ['Hello hello!', 'I hid an acorn somewhere fun.', 'Tree climbing weather!', 'Do you have any nuts?'],
+    anecdote: ['I buried 30 acorns and already forgot where half are.'],
+    insideJoke: ['You still pretend you don\'t see me in the trees.'],
+    invite: ['Treehouse dinner — bring a kite.'],
     hobby: 'climbing',
   },
 ];
@@ -67,25 +93,45 @@ export class Villagers {
     for (let i = 0; i < VILLAGER_DEFS.length; i++) {
       const def = VILLAGER_DEFS[i];
       const home = this.buildings.get(def.home) || this.buildings.list[0];
-      // Place villager closer to their home so they're easily seen near the plaza
+      // Place villager at home so the schedule starts cleanly
       const pos = home.position.clone();
-      pos.x += (this._rng() - 0.5) * 5;
-      pos.z += (this._rng() - 0.5) * 5;
+      pos.x += (this._rng() - 0.5) * 1.5;
+      pos.z += (this._rng() - 0.5) * 1.5;
       pos.y = this.world.heightAt(pos.x, pos.z);
+
+      // Build 4 waypoints for the daily schedule
+      // - home: right at their house
+      // - morning: just outside home (front yard)
+      // - plaza: random spot near the fountain
+      // - evening: a few meters from home, opposite the plaza
+      const homeWP = home.position.clone();
+      const morningWP = home.position.clone();
+      morningWP.x += (this._rng() - 0.5) * 4;
+      morningWP.z += (this._rng() - 0.5) * 4;
+      const plazaWP = new THREE.Vector3((this._rng() - 0.5) * 6, 0, (this._rng() - 0.5) * 6);
+      const eveningWP = home.position.clone();
+      eveningWP.x += (this._rng() - 0.5) * 3;
+      eveningWP.z += 6 + (this._rng() - 0.5) * 3; // away from plaza
 
       const villager = this._buildVillager(def);
       villager.position.copy(pos);
       villager.userData.def = def;
       villager.userData.home = home;
       villager.userData.target = pos.clone();
-      villager.userData.nextDecision = 1 + this._rng() * 3;
-      // Each villager has a wide wander radius so they visit the plaza
-      villager.userData.wanderRadius = 18 + this._rng() * 8;
-      villager.userData.preferredDest = i % 2 === 0 ? 'plaza' : 'home';
-      villager.userData.plazaTarget = new THREE.Vector3((this._rng() - 0.5) * 6, 0, (this._rng() - 0.5) * 6);
+      // Schedule waypoints and current state
+      villager.userData.waypoints = {
+        home: homeWP.clone(),
+        morning: morningWP.clone(),
+        plaza: plazaWP.clone(),
+        evening: eveningWP.clone(),
+      };
+      villager.userData.currentSegment = 'home'; // start sleeping at home until wake
+      villager.userData.friendship = 0;
+      villager.userData.friendshipSeen = false; // tracks whether player has met them
+      villager.userData.birthdayGiftCount = 0; // gifts received today on their birthday
+      villager.userData.lastGiftDay = -1; // last day they received a gift
       villager.userData.facing = this._rng() * Math.PI * 2;
       villager.userData.bob = this._rng() * Math.PI * 2;
-      villager.userData.friendship = 0;
       this.scene.add(villager);
       this.list.push(villager);
     }
@@ -444,37 +490,47 @@ export class Villagers {
 
   _wander(v, dt, time) {
     const def = v.userData.def;
-    // Sleep at night
-    const isSleeping = time.hour >= def.schedule.sleep || time.hour < def.schedule.wake;
-    if (isSleeping) {
+    const s = def.schedule;
+    const wp = v.userData.waypoints;
+
+    // Pick the segment for this hour of the day.
+    //   < wake or >= sleep  → 'home'  (sleeping, frozen at home)
+    //   wake..plazaHour     → 'morning'
+    //   plazaHour..evening   → 'plaza'
+    //   evening..sleep       → 'evening'
+    let segment;
+    const h = time.hour;
+    if (h < s.wake || h >= s.sleep) segment = 'home';
+    else if (h < s.plazaHour) segment = 'morning';
+    else if (h < s.eveningHour) segment = 'plaza';
+    else segment = 'evening';
+
+    // Update target if the segment changed
+    if (segment !== v.userData.currentSegment) {
+      v.userData.currentSegment = segment;
+      v.userData.target.copy(wp[segment]);
+    }
+
+    if (segment === 'home' && h < s.wake) {
+      // Sleeping — frozen, idle breathing only
       v.userData.walking = false;
-      // Idle breathing
       return;
     }
-    v.userData.nextDecision -= dt;
+
     const toTarget = v.userData.target.clone().sub(v.position);
     toTarget.y = 0;
     const dist = toTarget.length();
 
-    if (dist < 0.3 || v.userData.nextDecision <= 0) {
-      // Half the time head to the plaza so villagers visibly gather
-      if (this._rng() < 0.45) {
-        v.userData.target.copy(v.userData.plazaTarget);
-      } else {
-        const home = v.userData.home;
-        const angle = this._rng() * Math.PI * 2;
-        const radius = this._rng() * v.userData.wanderRadius;
-        const t = home.position.clone();
-        t.x += Math.cos(angle) * radius;
-        t.z += Math.sin(angle) * radius;
-        t.x = Math.max(-this.world.size * 0.42, Math.min(this.world.size * 0.42, t.x));
-        t.z = Math.max(-this.world.size * 0.42, Math.min(this.world.size * 0.42, t.z));
-        if (t.z < -22 && t.z > -54 && Math.abs(t.x) < 30) {
-          t.z = t.z < -38 ? -22 : -54;
-        }
-        v.userData.target.copy(t);
-      }
-      v.userData.nextDecision = 4 + this._rng() * 6;
+    // Once we're close to the current waypoint, do a small in-place idle
+    // (slight wander around the waypoint) until the hour advances.
+    if (dist < 0.6) {
+      v.userData.walking = false;
+      // Add a tiny breathing offset so they don't feel glued to the spot
+      const idleAngle = time.t * 0.7 + (v.userData.def.name?.charCodeAt(0) || 0);
+      v.position.x = wp[segment].x + Math.cos(idleAngle) * 0.3;
+      v.position.z = wp[segment].z + Math.sin(idleAngle) * 0.3;
+      v.position.y = this.world.heightAt(v.position.x, v.position.z);
+      return;
     }
 
     // Move toward target at villager pace
