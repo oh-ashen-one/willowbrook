@@ -516,7 +516,8 @@ export class World {
 
   _paintPath() {
     // Winding dirt footpath from the south shore up to the plaza fountain.
-    // Each segment is a flat ring; together they form an organic curve.
+    // A continuous dirt strip is laid first, then stepping-stone plates ride
+    // on top so the path doesn't read as floating stairs from high camera angles.
     this.pathGroup = new THREE.Group();
     const pathMat = new THREE.MeshToonMaterial({
       gradientMap: gradientMap(3),
@@ -526,32 +527,58 @@ export class World {
       gradientMap: gradientMap(3),
       color: 0x8a6f48,
     });
+    const pathMatDark = new THREE.MeshToonMaterial({
+      gradientMap: gradientMap(3),
+      color: 0x8e7548,
+    });
     // Walk along a smooth arc from (4, -52) up to near (1, -3) (plaza edge).
     const steps = 48;
-    const prev = new THREE.Vector3();
+    // Cache path spline once for both the underlay and the stepping stones
+    const pathPoints = [];
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
-      // Quadratic curve with gentle S-bend
       const x = 4 + Math.sin(t * Math.PI * 1.4) * 2 - t * 3;
       const z = -52 + t * 49;
-      const y = this.heightAt(x, z) + 0.02;
-      // Stepping-stone style: small irregular plates
+      pathPoints.push(new THREE.Vector3(x, this.heightAt(x, z), z));
+    }
+    // Build a continuous dirt strip by laying overlapping plates that follow
+    // the path — width 3.4 so it extends past the stones and reads as ground.
+    for (let i = 0; i < steps - 1; i++) {
+      const p = pathPoints[i];
+      const q = pathPoints[i + 1];
+      const segLen = p.distanceTo(q);
+      if (segLen < 0.01) continue;
+      const tx = q.x - p.x, tz = q.z - p.z;
+      const angle = Math.atan2(tz, tx);
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(segLen + 0.05, 0.03, 3.4),
+        i % 4 < 2 ? pathMatDark : pathMat
+      );
+      plate.position.set((p.x + q.x) / 2, Math.min(p.y, q.y) + 0.005, (p.z + q.z) / 2);
+      plate.rotation.y = -angle;
+      plate.receiveShadow = true;
+      this.pathGroup.add(plate);
+    }
+    // Stepping-stone plates ride a touch higher than the dirt strip
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const p = pathPoints[i];
       const w = 1.6 + Math.sin(t * 7.3) * 0.25;
       const l = 1.1 + Math.cos(t * 5.1) * 0.2;
       const stone = new THREE.Mesh(
-        new THREE.BoxGeometry(w, 0.04, l),
+        new THREE.BoxGeometry(w, 0.05, l),
         i % 3 === 0 ? pathEdge : pathMat
       );
-      stone.position.set(x, y, z);
+      stone.position.set(p.x, p.y + 0.03, p.z);
       stone.rotation.y = Math.sin(t * 3.7) * 0.3;
       stone.receiveShadow = true;
       this.pathGroup.add(stone);
       // Tiny pebbles alongside for organic feel
       if (i % 2 === 0) {
         for (let k = 0; k < 3; k++) {
-          const px = x + (Math.random() - 0.5) * 2.6;
-          const pz = z + (Math.random() - 0.5) * 2.0;
-          const py = this.heightAt(px, pz) + 0.03;
+          const px = p.x + (Math.random() - 0.5) * 2.6;
+          const pz = p.z + (Math.random() - 0.5) * 2.0;
+          const py = this.heightAt(px, pz) + 0.035;
           const peb = new THREE.Mesh(
             new THREE.SphereGeometry(0.05 + Math.random() * 0.05, 5, 4),
             pathMat
