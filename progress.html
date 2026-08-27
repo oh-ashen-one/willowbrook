@@ -271,6 +271,21 @@
   </section>
 
   <section class="wave">
+    <h2>Wave 6 — Villager Heart <span class="badge crit">critic: PASS</span></h2>
+    <p>Villagers now feel like people with routines instead of random wanderers:</p>
+    <ul>
+      <li><strong>Daily schedule</strong> — each of the 5 villagers follows a deterministic routine: wake → morning waypoint (front yard) → plaza → evening waypoint → sleep at home. Hour thresholds stored per species (Maple the bear is up earliest as a baker; Coral the octopus is the night owl).</li>
+      <li><strong>Gift reaction</strong> — walk up to a villager with a gift in your active hotbar slot, prompt changes to "Press E to give [item]". Hearts spawn above their head, friendship goes up by <code>gift.value × multiplier</code>. Each villager has a <code>favoriteGift</code> (Maple→flower, Finn→bug, Pebble→fossil, Coral→shell, Hazel→acorn) — matching gives 2×.</li>
+      <li><strong>Branching dialogue</strong> — <code>greet()</code> picks from a tiered pool based on friendship: &lt;100 = stranger greetings; ≥100 = + anecdotes; ≥250 = + inside jokes and dinner invites. 45+ unique dialogue outcomes across the 5 villagers.</li>
+      <li><strong>Birthdays</strong> — each villager has a birthday day-of-year; on their birthday a procedural � cake sprite (drawn on a 64×64 canvas, no emoji font) bobs above their head, and any gift given that day earns 3× friendship.</li>
+      <li><strong>Bunny Day</strong> — Spring day 7 spawns a hidden procedural bunny NPC in the plaza (egg body, upright ears with pink inner-ear cylinders, fluffy tail). Gift it a flower to trigger the celebration cutscene + 500 bells + 3 shells + 5 flowers. One-time per save.</li>
+      <li><strong>Save v2</strong> — bumped storage key to <code>willowbrook.save.v2</code> with v1 → v2 migration; now serializes per-villager friendship + first-meeting + Bunny Day flag so all Villager Heart progress survives reload.</li>
+    </ul>
+
+    <div class="critique"><strong>Critic wave-5:</strong> PASS — schedule, gift, dialogue, birthday, Bunny Day, save all verified. Three verifier-flagged bugs closed in the same session (bunny respawn, missing shadow, duplicate toast). <a href=".critique/wave-5-critique.md" style="color:var(--accent)">.critique/wave-5-critique.md</a></div>
+  </section>
+
+  <section class="wave">
     <h2>Wave 5 — Polish + movement <span class="badge pending">queued</span></h2>
     <p>Walk inside interiors (camera follows the player). Door exit to outside via E. Footstep particles per surface. Tree leaves drift. Butterflies react when player walks past. Soft camera shake on tool use. Footstep pitch shifts with surface (grass vs wood vs stone).</p>
   </section>
