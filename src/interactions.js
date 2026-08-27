@@ -43,7 +43,9 @@ export class Interactions {
     }
 
     // Proximity checks
-    const nearby = villagers.nearest(player.position, 2.5);
+    const nearby = (villagers.nearestIncludingBunny
+      ? villagers.nearestIncludingBunny(player.position, 2.5)
+      : villagers.nearest(player.position, 2.5));
     const inside = this.modules.interiors && this.modules.interiors.isInside();
     const activeItem = inventory && inventory.activeItem();
     const activeDef = activeItem ? ITEMS[activeItem.id] : null;
@@ -150,12 +152,37 @@ export class Interactions {
         if (this.modules.game && this.modules.game.shake) this.modules.game.shake(0.1, 0.1);
         // Toast with the friendship earned
         const bonusText = isFavorite ? ' (favorite — 2×)' : (todaysBirthday ? ' (birthday — 3×)' : '');
-        ui.toast(`${def.name} +${earned} friendship${bonusText}`);
+ui.toast(`${def.name} +${earned} friendship${bonusText}`);
         this.activeDialogueWith = nearby;
         if (!nearby.userData.friendshipSeen) {
           inventory.bells += 50;
           ui.toast('+50 bells (first-meeting bonus)');
           nearby.userData.friendshipSeen = true;
+        }
+        // Bunny Day celebration: gifting the bunny a flower on Spring day 7
+        // triggers the celebration cutscene + a stack of egg-rewards.
+        if (nearby.userData.isBunny && giftId === 'flower' && !window._bunnyDayCelebrated) {
+          window._bunnyDayCelebrated = true;
+          this.activeDialogueWith = null;
+          ui.hideDialogue();
+          if (this.modules.cutscene) {
+            await this.modules.cutscene.play('videos/v2-complete.mp4', {
+              title: 'Happy Bunny Day!',
+              minDuration: 1500,
+            });
+          }
+          // Rewards
+          inventory.bells += 500;
+          inventory.add('shell', 3);
+          inventory.add('flower', 5);
+          ui.toast('🎉 Bunny Day! +500 bells, 3 shells, 5 flowers');
+          this.modules.audio.blip(1200, 0.4);
+          if (this.modules.game && this.modules.game.shake) this.modules.game.shake(0.5, 0.3);
+          // Despawn the bunny
+          if (this.modules.villagers && this.modules.villagers._bunny) {
+            this.modules.villagers.scene.remove(this.modules.villagers._bunny);
+            this.modules.villagers._bunny = null;
+          }
         }
         return;
       }

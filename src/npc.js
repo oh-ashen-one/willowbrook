@@ -482,10 +482,96 @@ export class Villagers {
   }
 
   update(dt, time) {
+    // Bunny Day: Spring day 7 spawns a hidden bunny in the plaza.
+    // The bunny is a one-off entity — not in this.list — so it's a fresh
+    // NPC the player can gift a flower to for a celebration.
+    const isBunnyDay = time.season === 'Spring' && time.day === 7;
+    if (isBunnyDay && !this._bunny) {
+      this._bunny = this._buildBunny();
+      this.scene.add(this._bunny);
+    } else if (!isBunnyDay && this._bunny) {
+      this.scene.remove(this._bunny);
+      this._bunny = null;
+    }
+    if (this._bunny) this._animateBunny(this._bunny, dt, time);
+
     for (const v of this.list) {
       this._wander(v, dt, time);
       this._animate(v, dt, time);
     }
+  }
+
+  nearestIncludingBunny(pos, range = 2.4) {
+    const v = this.nearest(pos, range);
+    if (v) return v;
+    if (this._bunny) {
+      const d = this._bunny.position.distanceTo(pos);
+      if (d < range) return this._bunny;
+    }
+    return null;
+  }
+
+  _buildBunny() {
+    const g = new THREE.Group();
+    g.name = 'bunny';
+    g.userData.isBunny = true;
+    g.userData.def = {
+      name: 'Bunny', species: 'bunny',
+      favoriteGift: 'flower',
+      greeting: ['Hippity hop!', 'I hid eggs this morning.', 'Happy Bunny Day!'],
+    };
+    const fur = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xf5e6c8 });
+    const pink = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xff9ec0 });
+    // Body (egg)
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), fur);
+    body.position.y = 0.45;
+    body.scale.y = 0.85;
+    g.add(body);
+    // Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), fur);
+    head.position.y = 0.85;
+    g.add(head);
+    // Ears (long upright)
+    for (const sx of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.45, 8), fur);
+      ear.position.set(sx * 0.12, 1.35, 0);
+      ear.rotation.z = sx * 0.12;
+      g.add(ear);
+      const innerEar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.35, 8), pink);
+      innerEar.position.set(sx * 0.12, 1.35, 0.04);
+      innerEar.rotation.z = sx * 0.12;
+      g.add(innerEar);
+    }
+    // Eyes
+    for (const sx of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
+        new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x222222 }));
+      eye.position.set(sx * 0.10, 0.92, 0.21);
+      g.add(eye);
+    }
+    // Pink nose
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), pink);
+    nose.position.set(0, 0.83, 0.25);
+    g.add(nose);
+    // Fluffy tail
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), fur);
+    tail.position.set(0, 0.35, -0.28);
+    g.add(tail);
+    // Position: in the plaza, near the fountain
+    g.position.set(0, 0, 0);
+    g.userData.bob = 0;
+    g.userData.facing = 0;
+    g.userData.friendship = 0;
+    g.userData.friendshipSeen = false;
+    g.castShadow = true;
+    return g;
+  }
+
+  _animateBunny(b, dt, time) {
+    b.userData.bob += dt * 1.4;
+    b.position.y = Math.abs(Math.sin(b.userData.bob * 1.5)) * 0.06;
+    // Slow spin in place
+    b.rotation.y = time.t * 0.4;
   }
 
   _wander(v, dt, time) {
@@ -555,6 +641,82 @@ export class Villagers {
     }
     // Subtle idle look-around
     v.rotation.y = v.userData.facing + Math.sin(t * 0.4 + v.userData.bob) * 0.06;
+
+    // Birthday 🎂 sprite — appears above the villager when it's their birthday.
+    // Lazy-created on first birthday match so we don't allocate sprites for
+    // every villager every frame.
+    const def = v.userData.def;
+    const isBirthday = def.birthday
+      && time.season + ' ' + time.day === def.birthday;
+    if (isBirthday) {
+      if (!v.userData._cakeSprite) {
+        const tex = this._cakeTexture();
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(0.7, 0.7, 0.7);
+        sprite.position.y = 2.0;
+        v.add(sprite);
+        v.userData._cakeSprite = sprite;
+      }
+      // Bob the cake gently
+      v.userData._cakeSprite.position.y = 2.0 + Math.sin(t * 1.5) * 0.08;
+    } else if (v.userData._cakeSprite) {
+      v.remove(v.userData._cakeSprite);
+      v.userData._cakeSprite.material.map.dispose();
+      v.userData._cakeSprite.material.dispose();
+      v.userData._cakeSprite = null;
+    }
+  }
+
+  /**
+   * Procedural cake emoji sprite — drawn on a 64x64 canvas so we don't
+   * need an emoji font or external asset.
+   */
+  _cakeTexture() {
+    if (this._cakeTex) return this._cakeTex;
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, 64, 64);
+    // Plate shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(32, 54, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Cake body (chocolate)
+    ctx.fillStyle = '#b87333';
+    ctx.fillRect(10, 30, 44, 22);
+    // Frosting drips (cream)
+    ctx.fillStyle = '#fff0d6';
+    ctx.beginPath();
+    ctx.moveTo(10, 30);
+    for (let x = 0; x <= 44; x += 6) {
+      const dip = (x % 12 === 0) ? 6 : 2;
+      ctx.lineTo(10 + x, 30 + dip);
+    }
+    ctx.lineTo(54, 30);
+    ctx.lineTo(54, 36);
+    ctx.lineTo(10, 36);
+    ctx.closePath();
+    ctx.fill();
+    // Candles
+    ctx.fillStyle = '#ff7aa8';
+    ctx.fillRect(18, 18, 3, 12);
+    ctx.fillRect(31, 16, 3, 14);
+    ctx.fillRect(44, 18, 3, 12);
+    // Flames
+    ctx.fillStyle = '#ffd56e';
+    ctx.beginPath(); ctx.arc(19.5, 17, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(32.5, 15, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(45.5, 17, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff8e7';
+    ctx.beginPath(); ctx.arc(19.5, 16.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(32.5, 14.5, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(45.5, 16.5, 1, 0, Math.PI * 2); ctx.fill();
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    this._cakeTex = tex;
+    return tex;
   }
 
   // Find nearest villager within interaction range

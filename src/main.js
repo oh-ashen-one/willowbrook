@@ -330,6 +330,10 @@ if (params.has('autostart')) {
     if (!game.running) await game.init();
     const setHour = parseFloat(params.get('hour'));
     if (!Number.isNaN(setHour)) game.modules.time.time = setHour * 60;
+    const setDay = parseInt(params.get('day'), 10);
+    if (!Number.isNaN(setDay) && setDay > 0) game.modules.time.day = setDay;
+    const setSeason = params.get('season');
+    if (setSeason) game.modules.time.season = setSeason;
     const setX = parseFloat(params.get('x'));
     const setZ = parseFloat(params.get('z'));
     if (!Number.isNaN(setX) && !Number.isNaN(setZ)) {
