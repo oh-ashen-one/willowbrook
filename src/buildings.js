@@ -219,6 +219,8 @@ export class Buildings {
       new THREE.SphereGeometry(0.05, 8, 6),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffd56e, emissive: 0xffd56e, emissiveIntensity: 0.3 })
     );
+    knob.name = 'doorknob';
+    knob.userData.skipOutline = true;
     knob.position.set(0.25, 0.6, 0.04);
     g.add(knob);
     // Stepping stone in front

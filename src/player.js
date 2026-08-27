@@ -66,6 +66,8 @@ export class Player {
       new THREE.BoxGeometry(0.10, 0.07, 0.05),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffd56e, emissive: 0xffd56e, emissiveIntensity: 0.4 })
     );
+    beltBuckle.name = 'buckle';
+    beltBuckle.userData.skipOutline = true;
     beltBuckle.position.set(0, 0.62, 0.31);
     g.add(beltBuckle);
 
@@ -81,9 +83,13 @@ export class Player {
     // Bag straps
     const strapMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a });
     const strapL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), strapMat);
+    strapL.name = 'strap';
+    strapL.userData.skipOutline = true;
     strapL.position.set(-0.22, 0.95, -0.18);
     g.add(strapL);
     const strapR = strapL.clone();
+    strapR.name = 'strap';
+    strapR.userData.skipOutline = true;
     strapR.position.x = 0.22;
     g.add(strapR);
 

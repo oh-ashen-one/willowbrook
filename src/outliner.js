@@ -6,14 +6,24 @@ import * as THREE from 'three';
 /**
  * Recursively outline every Mesh in `root`. Skip rules:
  * - meshes flagged with userData.skipOutline = true
- * - tiny meshes (eyes, particles, leaves) below an area threshold
+ * - tiny detail meshes (knobs, buckles, gems, eye parts) below an area threshold
+ *   or matching one of the skipKeywords on .name
  * - particles with userData.isParticle
  */
 export function outlineScene(root, opts = {}) {
   const color = opts.color ?? 0x1a1208;
   const thickness = opts.thickness ?? 0.03;
   const skipBelow = opts.skipBelow ?? 0.04; // world units
-  const skipKeywords = opts.skipKeywords ?? ['particle', 'eye', 'drop', 'pearl'];
+  // Default keyword filter — covers tiny AC detail meshes that look bad when
+  // outlined (a 1-2 px black halo around a doorknob just looks like noise).
+  // To opt back in, set userData.skipOutline = false on the mesh before calling.
+  const skipKeywords = opts.skipKeywords ?? [
+    'particle', 'eye', 'pupil', 'whites',
+    'drop', 'droplet', 'pearl',
+    'knob', 'doorknob', 'buckle', 'gem',
+    'sparkle', 'strap', 'button', 'nose',
+    'highlight', 'shine',
+  ];
   const outlineMat = new THREE.MeshBasicMaterial({
     color,
     side: THREE.BackSide,
