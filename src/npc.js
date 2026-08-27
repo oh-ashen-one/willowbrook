@@ -569,7 +569,18 @@ export class Villagers {
 
   greet(villager) {
     const def = villager.userData.def;
-    const lines = def.greeting;
-    return lines[Math.floor(Math.random() * lines.length)];
+    const fs = villager.userData.friendship || 0;
+    // Tier 0 (stranger): greeting + weather flavor
+    // Tier 1 (friend, fs >= 100): anecdote + favorite recipe offer
+    // Tier 2 (best friend, fs >= 250): inside joke + dinner invitation
+    let pool;
+    if (fs >= 250 && def.insideJoke && def.invite) {
+      pool = [...def.insideJoke, ...def.invite];
+    } else if (fs >= 100 && def.anecdote) {
+      pool = [...def.greeting, ...def.anecdote];
+    } else {
+      pool = def.greeting;
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 }
