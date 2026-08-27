@@ -99,13 +99,8 @@ class Game {
     const cutscene = new Cutscene();
     this.modules.cutscene = cutscene;
 
-    // Phase 2: HDRI environment for IBL on any remaining PBR materials
-    this._setupEnvironment();
-
-    // Cel-shading outline pass — once everything is in the scene
-    outlineScene(this.scene, { thickness: 0.035, skipBelow: 0.05 });
-
-    // Phase 2: HDRI for IBL lighting (procedural fallback if .hdr missing)
+    // Phase 2: HDRI environment for IBL on any remaining PBR materials.
+    // _setupEnvironment() is idempotent — safe to call again later if init() is refactored.
     this._setupEnvironment();
 
     // Camera follows the player
@@ -117,7 +112,8 @@ class Game {
     villagers.spawn();
     player.spawn(new THREE.Vector3(0, 0, 4));
 
-    // Cel-shading outline pass — runs AFTER all meshes are spawned
+    // Cel-shading outline pass — runs AFTER all meshes are spawned so the
+    // walker sees every cottage, fence, tree, NPC, and the player.
     const added = outlineScene(this.scene, { thickness: 0.06, skipBelow: 0.02 });
     console.log('[outliner] added', added, 'outlines');
 
@@ -131,6 +127,9 @@ class Game {
   _setupEnvironment() {
     // Try to load PolyHaven HDRI as scene.environment for IBL on PBR materials.
     // Falls back to a 4-color gradient cube map if loading fails.
+    // Idempotent: if init() (or both halves of it) call this twice, the second is a no-op.
+    if (this._envInstalled) return;
+    this._envInstalled = true;
     const HDR_URL = 'assets/hdri/sky.hdr';
     new RGBELoader().load(HDR_URL, (hdr) => {
       hdr.mapping = THREE.EquirectangularReflectionMapping;
