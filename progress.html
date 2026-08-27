@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Willowbrook — Build Progress</title>
+<style>
+  :root {
+    --bg: #1c1410;
+    --paper: #fff8e7;
+    --ink: #4a3a25;
+    --accent: #d68a4c;
+    --muted: #8a7558;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: 'Quicksand', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    border-bottom: 1px solid #3a2a1a;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 6px 0;
+    letter-spacing: 0.04em;
+  }
+  .tagline {
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .wave {
+    margin-bottom: 40px;
+    background: rgba(255, 248, 231, 0.04);
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid rgba(255, 232, 184, 0.08);
+  }
+  .wave h2 {
+    color: var(--accent);
+    font-size: 22px;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #1c1410;
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .badge.pending { background: #4a3a25; color: var(--muted); }
+  .badge.crit { background: #c44a3a; color: #fff8e7; }
+  .badge.video { background: #4a8fd1; color: #fff8e7; }
+  .wave p {
+    color: #d4c4a8;
+    line-height: 1.55;
+    margin: 8px 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .shot, .video-card {
+    background: #0f0a06;
+    border: 1px solid #3a2a1a;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .shot img, .video-card video {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #000;
+  }
+  .shot .label, .video-card .label {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .critique {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: rgba(196, 74, 58, 0.12);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #f2e6cf;
+    white-space: pre-wrap;
+  }
+  .critique strong { color: var(--accent); }
+  .links {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .links a {
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .links a:hover { background: var(--accent); color: #fff; }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px;
+    font-size: 12px;
+    border-top: 1px solid #3a2a1a;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <h1>Willowbrook</h1>
+  <div class="tagline">build progress · live</div>
+</header>
+
+<main>
+
+  <section class="wave">
+    <h2>Wave 0 — Scaffold <span class="badge">complete</span></h2>
+    <p>Three.js project boots in any browser via importmap, no build step. Modules split: world / player / npc / buildings / time / audio / inventory / ui / interactions / save / particles / weather / interiors. Local server at <code>http://localhost:8080</code>.</p>
+    <div class="links">
+      <a href="index.html?autostart=1">▶ Play in browser</a>
+      <a href=".critique/shots/">📸 All shots</a>
+      <a href="videos/">🎬 Videos</a>
+      <a href=".waves/">📝 Wave notes</a>
+    </div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 1 — Living town <span class="badge crit">critic: FAIL → fixed</span></h2>
+    <p>Player avatar with walk cycle, fixed-angle follow camera, HUD (clock, season, bells, hotbar). Five villagers with species-specific bodies, schedules, plaza-gathering AI. Six buildings + plaza + shop + museum. Time-of-day cycle. Trees, flowers, rocks, river, butterflies.</p>
+    <div class="grid">
+      <div class="shot"><img src=".critique/shots/w1-noon-plaza.png" alt=""><div class="label">Wave 1 · noon plaza</div></div>
+      <div class="shot"><img src=".critique/shots/w1-noon-shop.png" alt=""><div class="label">Wave 1 · shop</div></div>
+      <div class="shot"><img src=".critique/shots/w1-dawn-plaza.png" alt=""><div class="label">Wave 1 · dawn</div></div>
+    </div>
+    <div class="critique"><strong>Critique:</strong> See <a href=".critique/wave-1-critique.md" style="color:var(--accent)">.critique/wave-1-critique.md</a> — biggest gap was trees (icosahedron blobs), fountain (flat disc), horizon (black band), roofs (stripe), fences (bare sticks). All fixed in wave 2.</div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 2 — Polished silhouette <span class="badge crit">critic: FAIL → fixed</span></h2>
+    <p>Wave 1 critique addressed all five big gaps. Trees: multi-sphere lobed canopy with smooth shading + root blobs. Plaza fountain: octagonal stone with glowing blue water + central pillar + 4 lanterns + spray ball. Gable roofs: proper triangular prisms. Picket fences: ring with overlapping rails. Sky: dawn/dusk color shifts. Horizon: sky fringe ring. Plus starfield and drifting clouds.</p>
+    <div class="grid">
+      <div class="shot"><img src=".critique/shots/w2-noon-plaza.png" alt=""><div class="label">Wave 2 · plaza</div></div>
+      <div class="shot"><img src=".critique/shots/w2-noon-trees.png" alt=""><div class="label">Wave 2 · grove</div></div>
+      <div class="shot"><img src=".critique/shots/w2-night-stars.png" alt=""><div class="label">Wave 2 · night</div></div>
+    </div>
+    <div class="critique"><strong>Critique:</strong> See <a href=".critique/wave-2-critique.md" style="color:var(--accent)">.critique/wave-2-critique.md</a> — biggest remaining gap was fountain water not mounding up, trees too tall, fence corners broken, dawn too red, stars too sparse. Fixed in wave 3.</div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 3 — Story cutscenes <span class="badge">complete</span></h2>
+    <p>Three MiniMax-H3 generated videos are now embedded in the experience at the right narrative beats:</p>
+    <ul>
+      <li><strong>Intro</strong> — plays after clicking "Visit Town". A warm dawn over Willowbrook with the bear baker waving at the camera.</li>
+      <li><strong>Meet Maple</strong> — triggers the first time you talk to Maple (the bear baker near the plaza). She slides you a plate of cookies. You get 3 apples as a gift.</li>
+      <li><strong>Welcome home</strong> — fires the first time you stand on the plaza after meeting all five villagers AND earning 100+ bells. The whole town gathers at the fountain.</li>
+    </ul>
+    <p>Each video has a 1.5s minimum before skip (ESC / space / click) so the player can't accidentally blow past them.</p>
+
+    <div class="grid">
+      <div class="video-card">
+        <video controls muted loop playsinline poster="/tmp/v2-frames/v2-intro.png">
+          <source src="videos/v2-intro.mp4" type="video/mp4">
+        </video>
+        <div class="label">intro · plays on "Visit Town"</div>
+      </div>
+      <div class="video-card">
+        <video controls muted loop playsinline poster="/tmp/v2-frames/v2-meet-maple.png">
+          <source src="videos/v2-meet-maple.mp4" type="video/mp4">
+        </video>
+        <div class="label">middle · Maple's first meeting</div>
+      </div>
+      <div class="video-card">
+        <video controls muted loop playsinline poster="/tmp/v2-frames/v2-complete.png">
+          <source src="videos/v2-complete.mp4" type="video/mp4">
+        </video>
+        <div class="label">end · "you completed the first level"</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 3 — Interiors + Cinematics <span class="badge">complete</span></h2>
+    <p>Critic fixes landed: fountain water now mounds into a dome above the rim; trees are shorter + wider with 5 lateral lobes; fences continuous; dawn peach + dusk rose; 1400 stars with color jitter. <strong>Three mmx-cli videos generated</strong> at 2K/16:9. <strong>Three interior scenes</strong> with furniture: home (bed, dresser, mirror, table, plant, window), shop (counter + shelves + bell + labels), museum (fossil pedestals + sign).</p>
+
+    <div class="grid">
+      <div class="shot"><img src=".critique/shots/w3-noon-grove.png" alt=""><div class="label">Wave 3 · noon grove</div></div>
+      <div class="shot"><img src=".critique/shots/w3-fountain-side.png" alt=""><div class="label">Wave 3 · fountain</div></div>
+      <div class="shot"><img src=".critique/shots/w3-night-sky.png" alt=""><div class="label">Wave 3 · starry night</div></div>
+      <div class="shot"><img src=".critique/shots/w3-interior-home.png" alt=""><div class="label">Wave 3 · home interior</div></div>
+      <div class="shot"><img src=".critique/shots/w3-interior-shop.png" alt=""><div class="label">Wave 3 · shop interior</div></div>
+      <div class="shot"><img src=".critique/shots/w3-interior-museum.png" alt=""><div class="label">Wave 3 · museum interior</div></div>
+    </div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 4 — Polished critique fixes <span class="badge">complete</span></h2>
+    <p>The wave-3 critic flagged five gaps. All five are fixed:</p>
+    <ul>
+      <li><strong>Dawn sky math</strong> — discrete time-of-day bands; peach at dawn, rose at dusk, navy at night. Sky now reads AC-warm instead of muddy maroon.</li>
+      <li><strong>Fountain water mound</strong> — radius 0.6 → 1.1, raised Y, plus a TorusGeometry water ring at the rim. Water droplet animation on the pillar.</li>
+      <li><strong>Cyan fringe</strong> — color now read from sky every frame; blends with any time of day.</li>
+      <li><strong>Museum fossils</strong> — ammonite (torus), trilobite (box), dino-bone (cone), plant (4 leaves). Each pedestal is now distinct.</li>
+      <li><strong>Interior walls</strong> — four walls + doorway cutout + lintel + baseboard trim. Rooms enclose instead of floating in void.</li>
+      <li>Stars fade out by 5:30 AM (no more dawn stars).</li>
+      <li>Fossils scaled up 1.4×; pedestals shorter so fossils are the focus.</li>
+      <li>Interior camera lowered to eye-level (y=4 instead of y=9).</li>
+    </ul>
+
+    <div class="grid">
+      <div class="shot"><img src=".critique/shots/w5-noon-fountain.png" alt=""><div class="label">Wave 5 · noon fountain</div></div>
+      <div class="shot"><img src=".critique/shots/w5-dawn-plaza.png" alt=""><div class="label">Wave 5 · dawn plaza</div></div>
+      <div class="shot"><img src=".critique/shots/w5-dusk-plaza.png" alt=""><div class="label">Wave 5 · dusk plaza</div></div>
+      <div class="shot"><img src=".critique/shots/w5-night-plaza.png" alt=""><div class="label">Wave 5 · night plaza</div></div>
+      <div class="shot"><img src=".critique/shots/w5-interior-home.png" alt=""><div class="label">Wave 5 · home interior</div></div>
+      <div class="shot"><img src=".critique/shots/w5-interior-museum.png" alt=""><div class="label">Wave 5 · museum interior</div></div>
+      <div class="shot"><img src=".critique/shots/w5-interior-shop.png" alt=""><div class="label">Wave 5 · shop interior</div></div>
+    </div>
+
+    <div class="critique"><strong>Critic wave-3b:</strong> PASS — All 5 fixes verified visually. <a href=".critique/wave-3b-critique.md" style="color:var(--accent)">.critique/wave-3b-critique.md</a></div>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 5 — Polish + movement <span class="badge pending">queued</span></h2>
+    <p>Walk inside interiors (camera follows the player). Door exit to outside via E. Footstep particles per surface. Tree leaves drift. Butterflies react when player walks past. Soft camera shake on tool use. Footstep pitch shifts with surface (grass vs wood vs stone).</p>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 5 — Audio + ambience <span class="badge pending">queued</span></h2>
+    <p>Per-hour ambient pad (synth), real music sting for intro. Footstep cadence. Tool-use SFX per item. Wind through trees (gain scales with wind sway). Reeds and water near the river. Camera subtle shake on screen transitions.</p>
+  </section>
+
+  <section class="wave">
+    <h2>Wave 6 — Villager heart <span class="badge pending">queued</span></h2>
+    <p>Birthday events. Gift reactions. Visitor dialogue trees with branching. AC-style holiday calendar with one festival per season (New Year's, Bunny Day, cherry-blossom).</p>
+  </section>
+
+</main>
+
+<footer>
+  Willowbrook · built in Three.js · refresh to follow the build
+</footer>
+
+</body>
+</html>

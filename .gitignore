@@ -1,0 +1,22 @@
+# Willowbrook-specific gitignore
+
+# Local dev artifacts
+*.log
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Generated / cached
+node_modules/
+.cache/
+
+# Headless screenshot artifacts (regenerate from the game)
+.critique/shots/critic*/
+.critique/shots/critic2*/
+.critique/shots/critic3*/
+
+# Editor history
+.history/
