@@ -787,6 +787,8 @@ export class World {
 
     // Trees sway gently with wind (more at midday)
     const sway = 0.02 * (0.5 + time.lightLevel * 0.5);
+    // Expose current sway so audio.js can modulate a wind-through-trees layer
+    this._currentSway = sway;
     for (const t of this.trees) {
       t.rotation.z = Math.sin(time.t * 0.8 + t.position.x) * sway;
       t.rotation.x = Math.cos(time.t * 0.6 + t.position.z) * sway;

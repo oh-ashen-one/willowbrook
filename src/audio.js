@@ -30,6 +30,7 @@ export class Audio {
 
       this._startPad();
       this._startBirds();
+      this._startWind();
       this.started = true;
     } catch (e) {
       console.warn('Audio unavailable:', e);
@@ -85,6 +86,37 @@ export class Audio {
     chirp();
   }
 
+  _startWind() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    // Wind-through-trees: a band-passed white-noise generator whose gain
+    // scales with the world tree-sway magnitude. Cheap to render, scales
+    // naturally with weather.
+    const bufferSize = 2 * ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    // Band-pass around 800 Hz so it reads as rustling foliage, not hiss.
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 800;
+    bp.Q.value = 0.7;
+    // Slow LFO modulates the band-pass center for a "gust" feel.
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.13;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 120;
+    lfo.connect(lfoGain);
+    lfoGain.connect(bp.frequency);
+    this._windGain = ctx.createGain();
+    this._windGain.gain.value = 0; // ramped up by update()
+    noise.connect(bp); bp.connect(this._windGain); this._windGain.connect(this.ambientGain);
+    noise.start(); lfo.start();
+  }
+
   update(dt, time, world) {
     if (!this.started || !this.ctx) return;
     // Tilt music timbre by hour — brighter at noon, warmer at night
@@ -96,6 +128,14 @@ export class Audio {
     else if (h >= 17 && h < 20) desired = 0.24;
     else desired = 0.10;
     this.musicGain.gain.value = target + (desired - target) * Math.min(1, dt * 0.5);
+
+    // Wind-through-trees gain tracks world tree-sway magnitude.
+    // Sway is 0.02 base + 0.02 * lightLevel, so map 0.02 → 0.005, 0.04 → 0.025
+    if (this._windGain && world && typeof world._currentSway === 'number') {
+      const sway = world._currentSway;
+      const target = Math.min(0.025, Math.max(0, (sway - 0.018) * 1.6));
+      this._windGain.gain.value += (target - this._windGain.gain.value) * Math.min(1, dt * 0.7);
+    }
 
     // Footstep SFX — duck the volume briefly so it doesn't clip
     const input = window._input || {};
