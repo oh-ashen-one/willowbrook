@@ -45,6 +45,9 @@ export class Interactions {
     // Proximity checks
     const nearby = villagers.nearest(player.position, 2.5);
     const inside = this.modules.interiors && this.modules.interiors.isInside();
+    const activeItem = inventory && inventory.activeItem();
+    const activeDef = activeItem ? ITEMS[activeItem.id] : null;
+    const hasGift = activeDef && activeDef.type === 'gift' && activeItem.count > 0;
     if (inside) {
       // Inside an interior: show "press E to leave" when standing near the
       // doorway. Doorway is the gap in the front wall (z ≈ +8, x ∈ [-0.5, 0.5]).
@@ -56,6 +59,8 @@ export class Interactions {
       } else {
         ui.hideInteractPrompt();
       }
+    } else if (nearby && hasGift) {
+      ui.showInteractPrompt(`Press E to give ${activeDef.name}`);
     } else if (nearby) {
       ui.showInteractPrompt('Press E to talk');
     } else {
@@ -109,6 +114,49 @@ export class Interactions {
         // Advance dialogue: simple close-on-second-press
         this.activeDialogueWith = null;
         ui.hideDialogue();
+        return;
+      }
+      if (nearby && hasGift) {
+        // GIVE GIFT: skip dialogue, give the held gift, add friendship, sparkle
+        const giftId = activeItem.id;
+        const giftDef = activeDef;
+        const def = nearby.userData.def;
+        const isFavorite = def.favoriteGift === giftId;
+        // Birthday check (Phase 4 will provide the day-of-year format)
+        const todaysBirthday = this.modules.time && def.birthday
+          && this.modules.time.season + ' ' + this.modules.time.day === def.birthday;
+        const multiplier = isFavorite ? 2 : (todaysBirthday ? 3 : 1);
+        const earned = (giftDef.value || 0) * multiplier;
+        nearby.userData.friendship = (nearby.userData.friendship || 0) + earned;
+        inventory.remove(giftId, 1);
+        // Visual reaction: heart particles at the villager's head
+        const heartPos = nearby.position.clone().add(new THREE.Vector3(0, 1.4, 0));
+        particles.spawnPickupPuff(heartPos, 0xff7aa8);
+        // Per-gift reaction line
+        const lines = {
+          flower:  ['Oh! A flower — thank you!', 'So pretty! I\'ll press it.'],
+          bug:     ['A BUG! Ribbit! Thanks!', 'I\'ll show it off at the pond.'],
+          fossil:  ['Whoa — a fossil!', 'This belongs in the museum!'],
+          fish:    ['A fish! Fresh!', 'You\'re the best fisher!'],
+          apple:   ['An apple — my favorite snack!', 'Crunch! Perfect.'],
+          acorn:   ['An acorn! My treasure!', 'I\'ll bury it somewhere secret.'],
+          shell:   ['A shell — listen to the ocean!', 'So pretty. Thank you.'],
+        };
+        const pool = lines[giftId] || ['Thank you!'];
+        const greeting = pool[Math.floor(Math.random() * pool.length)];
+        ui.showDialogue(nearby.userData.def.name, greeting);
+        // Audio + camera shake
+        this.modules.audio.blip(880, 0.2);
+        if (this.modules.game && this.modules.game.shake) this.modules.game.shake(0.1, 0.1);
+        // Toast with the friendship earned
+        const bonusText = isFavorite ? ' (favorite — 2×)' : (todaysBirthday ? ' (birthday — 3×)' : '');
+        ui.toast(`${def.name} +${earned} friendship${bonusText}`);
+        this.activeDialogueWith = nearby;
+        if (!nearby.userData.friendshipSeen) {
+          inventory.bells += 50;
+          ui.toast('+50 bells (first-meeting bonus)');
+          nearby.userData.friendshipSeen = true;
+        }
         return;
       }
       if (nearby) {
