@@ -24,9 +24,21 @@ export class Interiors {
 
   exit() {
     if (this._fading !== 0) return;
+    // Snap player back to the doorway on the world side so the fade-in lands
+    // them right in front of the building they just left.
+    if (this.modules.player) {
+      const pos = this.modules.game?._savedPlayerPos;
+      if (pos) this.modules.player.position.copy(pos);
+      this.modules.player._interiorMode = false;
+      this.modules.player._interiorHalf = null;
+    }
     this._pendingInterior = null;
     this._fading = -1;
     this._fadeT = 0;
+    // Re-enter the world once the fade-in finishes
+    setTimeout(() => {
+      if (this.modules.onExitToWorld) this.modules.onExitToWorld();
+    }, 350);
   }
 
   update(dt) {
@@ -137,6 +149,8 @@ export class Interiors {
 
     // Place player inside (camera anchor)
     this.modules.player.position.set(0, 0, 2);
+    this.modules.player._interiorMode = true;
+    this.modules.player._interiorHalf = 7.5;
     this.modules.player._snapToGround();
   }
 

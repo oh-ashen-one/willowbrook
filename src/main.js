@@ -192,19 +192,36 @@ class Game {
   reenterWorld() {
     // Wipe scene
     while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
-    // Reset modules but keep audio + ui + save + time + inventory
+    // Reset modules but keep audio + ui + save + time + inventory + buildings
     this.modules.world = new World(this.scene);
     this.modules.world.populate();
     this.modules.player = new Player(this.scene, this.modules.world);
+    // Restore the saved outdoor position; clear interior mode
+    this.modules.player._interiorMode = false;
+    this.modules.player._interiorHalf = null;
     this.modules.player.spawn(this._savedPlayerPos || new THREE.Vector3(0, 0, 4));
+    // Buildings list survives (buildings.js holds them in `this.list`)
     this.modules.villagers = new Villagers(this.scene, this.modules.world, this.modules.buildings);
     this.modules.villagers.spawn();
     this.modules.weather = new Weather(this.scene);
     this.modules.particles = new Particles(this.scene);
     this.modules.interactions = new Interactions(this.modules);
+    this.modules.game = this;
     // Hook the exit handler
     this.modules.onExitToWorld = null;
     this.modules.interiors = null;
+    // Re-run the outline pass over the freshly spawned world
+    const { outlineScene } = this.outlineScene || {};
+    if (outlineScene) {
+      const n = outlineScene(this.scene, { thickness: 0.06, skipBelow: 0.02 });
+      console.log('[outliner] re-added', n, 'outlines after interior exit');
+    } else {
+      // Lazy-load outliner if not pre-cached
+      import('./outliner.js').then((m) => {
+        const n = m.outlineScene(this.scene, { thickness: 0.06, skipBelow: 0.02 });
+        console.log('[outliner] re-added', n, 'outlines after interior exit');
+      });
+    }
   }
 
   onResize() {
@@ -248,9 +265,17 @@ class Game {
       if (interactions) interactions.update(dt);
       if (ui) ui.update(dt);
       this.modules.interiors.update(dt);
-      // Interior camera: lower and closer, looking at the back of the room
-      this.camera.position.set(0, 4, 6);
-      this.camera.lookAt(0, 1.2, -3);
+      // Interior camera: follow the player from a low AC-style angle.
+      // Slightly elevated, looking down and toward the front of the room.
+      if (player) {
+        this.cameraTarget.lerp(player.cameraAnchor(), 0.08);
+        const camOffset = new THREE.Vector3(0, 4.5, 6.5);
+        this.camera.position.lerp(this.cameraTarget.clone().add(camOffset), 0.1);
+        this.camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 0.4, -2)));
+      } else {
+        this.camera.position.set(0, 4, 6);
+        this.camera.lookAt(0, 1.2, -3);
+      }
     } else {
       // Outside: full update
       if (world) world.update(dt, time);

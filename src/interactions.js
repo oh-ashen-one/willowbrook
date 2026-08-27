@@ -42,7 +42,19 @@ export class Interactions {
 
     // Proximity checks
     const nearby = villagers.nearest(player.position, 2.5);
-    if (nearby) {
+    const inside = this.modules.interiors && this.modules.interiors.isInside();
+    if (inside) {
+      // Inside an interior: show "press E to leave" when standing near the
+      // doorway. Doorway is the gap in the front wall (z ≈ +8, x ∈ [-0.5, 0.5]).
+      const dx = player.position.x;
+      const dz = player.position.z - 8;
+      const atDoor = (Math.abs(dx) < 1.2) && (dz > -1.6 && dz < 1.0);
+      if (atDoor) {
+        ui.showInteractPrompt('Press E to step outside');
+      } else {
+        ui.hideInteractPrompt();
+      }
+    } else if (nearby) {
       ui.showInteractPrompt('Press E to talk');
     } else {
       ui.hideInteractPrompt();
@@ -78,6 +90,19 @@ export class Interactions {
     this._downAction = actionNow;
 
     if (justPressed) {
+      // Inside: E near doorway steps back outside
+      if (inside) {
+        const dx = player.position.x;
+        const dz = player.position.z - 8;
+        const atDoor = (Math.abs(dx) < 1.2) && (dz > -1.6 && dz < 1.0);
+        if (atDoor && this.modules.interiors) {
+          this.modules.player._interiorMode = false;
+          this.modules.player._interiorHalf = null;
+          this.modules.interiors.exit();
+          ui.hideInteractPrompt();
+          return;
+        }
+      }
       if (this.activeDialogueWith) {
         // Advance dialogue: simple close-on-second-press
         this.activeDialogueWith = null;

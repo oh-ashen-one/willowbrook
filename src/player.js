@@ -290,6 +290,15 @@ export class Player {
   }
 
   _clampToWorld() {
+    // Interior mode: confine to a small room. The doorway is at z ≈ +8,
+    // x ∈ [-0.5, 0.5], so we let the player reach that gap (a tiny margin
+    // wider than the 1.0-wide doorway slot) for the E-to-exit prompt.
+    if (this._interiorMode) {
+      const half = this._interiorHalf ?? 7.5;
+      this.position.x = Math.max(-half, Math.min(half, this.position.x));
+      this.position.z = Math.max(-half, Math.min(half, this.position.z));
+      return;
+    }
     const half = this.world.size * 0.45;
     this.position.x = Math.max(-half, Math.min(half, this.position.x));
     this.position.z = Math.max(-half + 6, Math.min(half, this.position.z));
