@@ -484,9 +484,12 @@ export class Villagers {
   update(dt, time) {
     // Bunny Day: Spring day 7 spawns a hidden bunny in the plaza.
     // The bunny is a one-off entity — not in this.list — so it's a fresh
-    // NPC the player can gift a flower to for a celebration.
+    // NPC the player can gift a flower to for a celebration. Gated on
+    // window._bunnyDayCelebrated so it doesn't respawn after the player
+    // has already completed the celebration.
     const isBunnyDay = time.season === 'Spring' && time.day === 7;
-    if (isBunnyDay && !this._bunny) {
+    const celebrated = !!window._bunnyDayCelebrated;
+    if (isBunnyDay && !this._bunny && !celebrated) {
       this._bunny = this._buildBunny();
       this.scene.add(this._bunny);
     } else if (!isBunnyDay && this._bunny) {
@@ -517,7 +520,10 @@ export class Villagers {
     g.userData.isBunny = true;
     g.userData.def = {
       name: 'Bunny', species: 'bunny',
-      favoriteGift: 'flower',
+      // No favoriteGift — the bunny reacts specially to flowers via the
+      // Bunny Day celebration branch in interactions.js, not via the
+      // generic favorite-gift multiplier. This keeps the +N friendship
+      // math honest.
       greeting: ['Hippity hop!', 'I hid eggs this morning.', 'Happy Bunny Day!'],
     };
     const fur = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xf5e6c8 });
@@ -563,7 +569,8 @@ export class Villagers {
     g.userData.facing = 0;
     g.userData.friendship = 0;
     g.userData.friendshipSeen = false;
-    g.castShadow = true;
+    // Children must cast shadow individually — Groups don't propagate.
+    for (const child of g.children) child.castShadow = true;
     return g;
   }
 

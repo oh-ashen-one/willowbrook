@@ -150,11 +150,14 @@ export class Interactions {
         // Audio + camera shake
         this.modules.audio.blip(880, 0.2);
         if (this.modules.game && this.modules.game.shake) this.modules.game.shake(0.1, 0.1);
-        // Toast with the friendship earned
-        const bonusText = isFavorite ? ' (favorite — 2×)' : (todaysBirthday ? ' (birthday — 3×)' : '');
-ui.toast(`${def.name} +${earned} friendship${bonusText}`);
+        // Toast with the friendship earned (skipped for the bunny since it gets
+        // its own celebration toast below — avoids overlap).
+        if (!nearby.userData.isBunny) {
+          const bonusText = isFavorite ? ' (favorite — 2×)' : (todaysBirthday ? ' (birthday — 3×)' : '');
+          ui.toast(`${def.name} +${earned} friendship${bonusText}`);
+        }
         this.activeDialogueWith = nearby;
-        if (!nearby.userData.friendshipSeen) {
+        if (!nearby.userData.friendshipSeen && !nearby.userData.isBunny) {
           inventory.bells += 50;
           ui.toast('+50 bells (first-meeting bonus)');
           nearby.userData.friendshipSeen = true;
