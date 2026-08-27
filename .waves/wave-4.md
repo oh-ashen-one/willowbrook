@@ -157,16 +157,33 @@ adds outlines after spawn with no measurable perf hit.
 - src/main.js — outlineScene wired AFTER populate/spawn, HDRI loader + intensity
 - assets/hdri/sky.hdr — 702 KB kloofendal_misty_morning_puresky_1k
 
+## Polish followups (post-critic, same session)
+
+The critic returned PASS but flagged six nits. Five were cleaned up in
+followup commits the same session; one (HDRI subtlety) was kept as-is
+because it's intentional for the controlled cel look.
+
+| Nit | Fix | Commit |
+|---|---|---|
+| Path stones look like stairs from high angles | Continuous dirt strip under the stones | `784942d` |
+| `_setupEnvironment()` called twice in init | Idempotency guard + dropped empty outline pre-pass | `45ccfff` |
+| Tiny detail meshes getting 1-2 px outline halos | Expanded `skipKeywords` + named doorknob / buckle / straps | `2c1739d` |
+| 12 console warnings on page load (leftover PBR props on MeshToonMaterial) | Stripped `roughness` / `metalness` / `flatShading` from 6 sites | `6366fbd` |
+| (in the same commit) No foot-puffs on regular walking | `_lastBob` step detector in `interactions.update()` | `6366fbd` |
+| Trees lose toon banding at distance | Shadow-belly sphere under each lobed canopy | `3cae4d3` |
+| (kept) HDRI subtle as ambient rim | Intentional — sky dome owns background | — |
+| (cleanup) Orphan Quaternius assets dir | `.gitignore`d; not deleted (user can decide) | `526c956` |
+| (cleanup) Phase-1 in-progress evidence PNGs | Committed to `.critique/shots/` | `526c956` |
+
+Final commit count on `master`: **8 commits** (`a848a57` initial → `3cae4d3`
+post-polish). Local and remote in sync.
+
 ## Known gaps for future waves
 
-1. Path stones look like "stairs" from above-camera angles — could use a
-   continuous plane underneath the stones
-2. Grass tufts are very visible at noon but disappear at distance — acceptable
-3. Outlines on the smallest meshes (eyes, door knobs) are still wrapped; a
-   `skipMeshes` filter would let those stay clean
-4. No ambient bird audio yet (the chirp synth is still there but tied to time)
-5. Lantern PointLight pool radius is 6 units — could go to 9 for more glow
-6. The HDRI is mostly visible as a slight rim light rather than as a visible
-   background — that's intentional since the sky dome handles background.
-   If we want a true reflective ground we'd need to add a faint envmap cube
-   underlay.
+1. Grass tufts are very visible at noon but disappear at distance — acceptable
+2. No ambient bird audio yet (the chirp synth is still there but tied to time)
+3. Lantern PointLight pool radius is 6 units — could go to 9 for more glow
+4. The HDRI is mostly visible as a slight rim light rather than as a visible
+   background — intentional since the sky dome handles background. If we want
+   a true reflective ground we'd need a faint envmap cube underlay.
+5. The path stops at the plaza; no branch paths to villager homes yet.
