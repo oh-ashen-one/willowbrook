@@ -1,6 +1,10 @@
 // Save — localStorage persistence.
+// v2 (Aug 2026): also serializes per-villager friendship + first-meeting
+// state + bunnyDayCelebrated so the Villager Heart progress carries
+// across reloads. v1 saves are read once and migrated to v2 on the fly.
 
-const KEY = 'willowbrook.save.v1';
+const KEY_V1 = 'willowbrook.save.v1';
+const KEY = 'willowbrook.save.v2';
 
 export class Save {
   constructor() {
@@ -9,8 +13,14 @@ export class Save {
 
   load(modules) {
     try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return;
+      let raw = localStorage.getItem(KEY);
+      let v1Migrated = false;
+      if (!raw) {
+        // Try the v1 key once — migrate to v2 format on first read.
+        raw = localStorage.getItem(KEY_V1);
+        if (!raw) return;
+        v1Migrated = true;
+      }
       const data = JSON.parse(raw);
       this.data = data;
       if (data.inventory) {
@@ -26,6 +36,26 @@ export class Save {
         modules.time.day = data.time.day || 1;
         modules.time.season = data.time.season || 'Spring';
       }
+      // v2 fields: per-villager friendship + first-meeting + bunnyDayCelebrated
+      const villagers = modules.villagers && modules.villagers.list;
+      if (villagers && data.villagers) {
+        for (let i = 0; i < villagers.length; i++) {
+          const v = villagers[i];
+          const saved = data.villagers[v.userData.def.name];
+          if (saved) {
+            v.userData.friendship = saved.friendship || 0;
+            v.userData.friendshipSeen = !!saved.seen;
+          }
+        }
+      }
+      if (typeof data.bunnyDayCelebrated === 'boolean') {
+        window._bunnyDayCelebrated = data.bunnyDayCelebrated;
+      }
+      // If we just migrated, write back under the v2 key so future loads
+      // hit the fast path.
+      if (v1Migrated) {
+        try { localStorage.setItem(KEY, raw); localStorage.removeItem(KEY_V1); } catch (_) {}
+      }
     } catch (e) {
       console.warn('Save load failed', e);
     }
@@ -33,6 +63,17 @@ export class Save {
 
   save(modules) {
     try {
+      const villagers = {};
+      if (modules.villagers && modules.villagers.list) {
+        for (const v of modules.villagers.list) {
+          if (v.userData && v.userData.def) {
+            villagers[v.userData.def.name] = {
+              friendship: v.userData.friendship || 0,
+              seen: !!v.userData.friendshipSeen,
+            };
+          }
+        }
+      }
       const data = {
         inventory: {
           slots: modules.inventory.slots,
@@ -49,6 +90,8 @@ export class Save {
           day: modules.time.day,
           season: modules.time.season,
         },
+        villagers,
+        bunnyDayCelebrated: !!window._bunnyDayCelebrated,
       };
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch (e) {
