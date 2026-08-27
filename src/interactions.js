@@ -33,6 +33,8 @@ export class Interactions {
           .addScaledVector(fwd, 0.35)
           .addScaledVector(right, side * 0.18);
         const surface = this._surfaceAt(player.position.x, player.position.z);
+        // Tell audio.js what surface to use on its next footstep blip.
+        window._lastSurface = surface;
         particles.spawnFootPuff(pos, surface);
       }
       this._lastBob = cur % twoPi;
@@ -160,12 +162,16 @@ export class Interactions {
         particles.spawnPickupPuff(forage.position, ITEMS[forage.id].color);
         forage.parent && forage.parent.remove(forage);
       } else if (inventory.activeItem() && ITEMS[inventory.activeItem().id]?.type === 'tool') {
-        // Tool swing — emit dust + camera shake
+        // Tool swing — emit dust + camera shake + per-tool SFX
+        const toolId = inventory.activeItem().id;
         particles.spawnFootPuff(player.position.clone().add(new THREE.Vector3(0, 0.4, 0)).add(
           new THREE.Vector3(Math.sin(player.facing), 0, Math.cos(player.facing)).multiplyScalar(1)
         ));
         if (this.modules.game && this.modules.game.shake) {
           this.modules.game.shake(0.25, 0.18);
+        }
+        if (this.modules.audio && this.modules.audio.toolUse) {
+          this.modules.audio.toolUse(toolId);
         }
       }
     }
