@@ -27,25 +27,34 @@ export class Particles {
     }
   }
 
-  spawnFootPuff(pos) {
-    const count = 4 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < count; i++) {
-      const m = new THREE.SpriteMaterial({ map: this._softCircle(0xfff5d6), transparent: true, opacity: 0.6, depthWrite: false });
+  spawnFootPuff(pos, surface = 'grass') {
+    // Per-surface tuning — color, size, lifetime, drift, opacity all vary
+    // so footprints read differently on grass vs dirt vs wood vs water.
+    const palette = {
+      grass: { color: 0xd8e6b8, size: 0.22, opacity: 0.55, life: 0.55, drift: 0.4, count: 5 },
+      dirt:  { color: 0xc8a878, size: 0.20, opacity: 0.65, life: 0.50, drift: 0.6, count: 5 },
+      path:  { color: 0xb89a6a, size: 0.18, opacity: 0.55, life: 0.45, drift: 0.5, count: 4 },
+      wood:  { color: 0xb88a58, size: 0.10, opacity: 0.45, life: 0.30, drift: 0.2, count: 3 },
+      water: { color: 0xc6e4f0, size: 0.28, opacity: 0.50, life: 0.45, drift: 0.3, count: 6 },
+      stone: { color: 0x9a9a9a, size: 0.12, opacity: 0.55, life: 0.35, drift: 0.3, count: 3 },
+    }[surface] || { color: 0xfff5d6, size: 0.18, opacity: 0.6, life: 0.5, drift: 0.6, count: 4 };
+    for (let i = 0; i < palette.count; i++) {
+      const m = new THREE.SpriteMaterial({ map: this._softCircle(palette.color), transparent: true, opacity: palette.opacity, depthWrite: false });
       const s = new THREE.Sprite(m);
-      const size = 0.18 + Math.random() * 0.12;
+      const size = palette.size + Math.random() * palette.size * 0.4;
       s.scale.set(size, size, size);
       s.position.set(pos.x + (Math.random() - 0.5) * 0.4, pos.y, pos.z + (Math.random() - 0.5) * 0.4);
       this.scene.add(s);
-      const life = 0.5 + Math.random() * 0.2;
+      const life = palette.life + Math.random() * 0.15;
       this.active.push({
         mesh: s,
         life,
         maxLife: life,
-        startOpacity: 0.6,
+        startOpacity: palette.opacity,
         scale: size,
         update: (dt, k) => {
-          s.position.y += dt * 0.6;
-          s.material.opacity = k * 0.6;
+          s.position.y += dt * palette.drift;
+          s.material.opacity = k * palette.opacity;
         },
       });
     }

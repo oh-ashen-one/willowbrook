@@ -32,7 +32,8 @@ export class Interactions {
           .add(new THREE.Vector3(0, 0.05, 0))
           .addScaledVector(fwd, 0.35)
           .addScaledVector(right, side * 0.18);
-        particles.spawnFootPuff(pos);
+        const surface = this._surfaceAt(player.position.x, player.position.z);
+        particles.spawnFootPuff(pos, surface);
       }
       this._lastBob = cur % twoPi;
     } else {
@@ -134,10 +135,13 @@ export class Interactions {
         particles.spawnPickupPuff(forage.position, ITEMS[forage.id].color);
         forage.parent && forage.parent.remove(forage);
       } else if (inventory.activeItem() && ITEMS[inventory.activeItem().id]?.type === 'tool') {
-        // Tool swing — emit dust
+        // Tool swing — emit dust + camera shake
         particles.spawnFootPuff(player.position.clone().add(new THREE.Vector3(0, 0.4, 0)).add(
           new THREE.Vector3(Math.sin(player.facing), 0, Math.cos(player.facing)).multiplyScalar(1)
         ));
+        if (this.modules.game && this.modules.game.shake) {
+          this.modules.game.shake(0.25, 0.18);
+        }
       }
     }
   }
@@ -149,6 +153,43 @@ export class Interactions {
       if (d < bestD) { best = b; bestD = d; }
     }
     return best;
+  }
+
+  /**
+   * What surface is the player standing on? Used to color the foot-puff
+   * particles so footprints read differently on each material.
+   *   grass — open field (default)
+   *   dirt  — within ~1 unit of the stepping-stone path spline
+   *   water — on the river strip (z ∈ [-54, -22] and |x| < 30)
+   *   stone — within ~1 unit of any placed rock
+   *   wood  — inside an interior room
+   */
+  _surfaceAt(x, z) {
+    if (this.modules.interiors && this.modules.interiors.isInside()) return 'wood';
+    // River strip (matches player.js _clampToWorld logic)
+    if (z < -22 && z > -54 && Math.abs(x) < 30) return 'water';
+    // Path spline — gentle S-curve from x≈4,z=-52 to x≈1,z=-3 (matches world.js _paintPath)
+    // Distance check along the path: sample the curve and return the closest.
+    const pathSamples = 24;
+    let bestD2 = Infinity;
+    for (let i = 0; i <= pathSamples; i++) {
+      const t = i / pathSamples;
+      const px = 4 + Math.sin(t * Math.PI * 1.4) * 2 - t * 3;
+      const pz = -52 + t * 49;
+      const dx = x - px, dz = z - pz;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < bestD2) bestD2 = d2;
+    }
+    if (bestD2 < 1.4 * 1.4) return 'dirt';
+    // Stone — within 1 unit of any rock
+    const rocks = this.modules.world?.rocks;
+    if (rocks) {
+      for (const r of rocks) {
+        const dx = x - r.position.x, dz = z - r.position.z;
+        if (dx * dx + dz * dz < 1.0 * 1.0) return 'stone';
+      }
+    }
+    return 'grass';
   }
 
   _forage(pos) {

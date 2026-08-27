@@ -40,8 +40,23 @@ class Game {
     this.clock = new THREE.Clock();
     this.running = false;
     this.modules = {};
+    this._shake = { amp: 0, t: 0, dur: 0 };
 
     window.addEventListener('resize', () => this.onResize());
+  }
+
+  /**
+   * Trigger a brief camera shake. amplitude is world-units of max offset;
+   * duration is seconds. The shake decays linearly to zero over the window.
+   * Safe to call from any module via `modules.game.shake(amp, dur)`.
+   */
+  shake(amplitude = 0.3, duration = 0.15) {
+    // Use the loudest pending shake so a big hit doesn't get drowned by a small one
+    if (amplitude * duration > this._shake.amp * this._shake.dur) {
+      this._shake.amp = amplitude;
+      this._shake.dur = duration;
+      this._shake.t = 0;
+    }
   }
 
   async init() {
@@ -98,6 +113,9 @@ class Game {
 
     const cutscene = new Cutscene();
     this.modules.cutscene = cutscene;
+
+    // Expose the Game itself on modules so any module can call game.shake(amp, dur)
+    this.modules.game = this;
 
     // Phase 2: HDRI environment for IBL on any remaining PBR materials.
     // _setupEnvironment() is idempotent — safe to call again later if init() is refactored.
@@ -249,6 +267,20 @@ class Game {
         const camOffset = new THREE.Vector3(0, 9, 10);
         this.camera.position.lerp(this.cameraTarget.clone().add(camOffset), 0.1);
         this.camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 0, -4)));
+        // Camera shake — applied as a transient offset on top of the damped base
+        if (this._shake.amp > 0 && this._shake.dur > 0) {
+          this._shake.t += dt;
+          const k = Math.max(0, 1 - this._shake.t / this._shake.dur);
+          const a = this._shake.amp * k;
+          this.camera.position.x += (Math.random() - 0.5) * 2 * a;
+          this.camera.position.y += (Math.random() - 0.5) * 2 * a;
+          this.camera.position.z += (Math.random() - 0.5) * 2 * a * 0.4;
+          if (this._shake.t >= this._shake.dur) {
+            this._shake.amp = 0;
+            this._shake.t = 0;
+            this._shake.dur = 0;
+          }
+        }
       }
       // Apply lighting from time of day
       if (world) world.applyLighting(this.scene, time);
