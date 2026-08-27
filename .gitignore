@@ -18,5 +18,10 @@ node_modules/
 .critique/shots/critic2*/
 .critique/shots/critic3*/
 
+# Leftover from earlier sessions — never referenced by shipped code.
+# Keep on disk only as a reference; ignore from git so the wave-4 ship stays
+# procedural-only (per the user's no-Quaternius rule).
+assets/models/
+
 # Editor history
 .history/
