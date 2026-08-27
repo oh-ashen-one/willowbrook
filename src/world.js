@@ -501,6 +501,22 @@ export class World {
           group.add(fr);
         }
       }
+
+      // Permanent shadow-belly sphere — keeps a visible dark band on the
+      // canopy underside even at distance where the per-lobe toon shading
+      // averages out. Gives every tree a clear "lit top / dark belly" read.
+      if (type.type !== 'birch' && type.type !== 'cedar') {
+        const bellyMat = new THREE.MeshToonMaterial({
+          gradientMap: gradientMap(3),
+          color: type.leavesDark,
+        });
+        const bellyR = 1.5 * type.canopyScale * 0.85;
+        const belly = new THREE.Mesh(new THREE.SphereGeometry(bellyR, 12, 8), bellyMat);
+        belly.position.set(0, trunkH + 0.15, 0);
+        belly.scale.y = 0.45;
+        belly.castShadow = true;
+        group.add(belly);
+      }
     }
 
     group.userData.isTree = true;
