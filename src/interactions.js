@@ -13,6 +13,32 @@ export class Interactions {
   async update(dt) {
     const { player, villagers, buildings, ui, inventory, particles, time } = this.modules;
 
+    // Foot-puff on each foot strike while walking.
+    // The walk cycle uses sin(bob) so foot-strikes happen near bob = 0 / π / 2π.
+    // We detect crossings of π and 2π to fire one puff per step.
+    if (player.walking && player.velocity.length() > 1.2) {
+      const prev = this._lastBob ?? player.bob;
+      const cur = player.bob;
+      const twoPi = Math.PI * 2;
+      const fired =
+        (prev < Math.PI && cur >= Math.PI) ||
+        (prev < twoPi && cur >= twoPi);
+      if (fired && particles) {
+        // Spawn at the leading foot, slightly in front of facing direction
+        const side = ((Math.floor(cur / Math.PI) % 2) === 0) ? -1 : 1;
+        const fwd = new THREE.Vector3(Math.sin(player.facing), 0, Math.cos(player.facing));
+        const right = new THREE.Vector3(Math.cos(player.facing), 0, -Math.sin(player.facing));
+        const pos = player.position.clone()
+          .add(new THREE.Vector3(0, 0.05, 0))
+          .addScaledVector(fwd, 0.35)
+          .addScaledVector(right, side * 0.18);
+        particles.spawnFootPuff(pos);
+      }
+      this._lastBob = cur % twoPi;
+    } else {
+      this._lastBob = player.bob;
+    }
+
     // Proximity checks
     const nearby = villagers.nearest(player.position, 2.5);
     if (nearby) {

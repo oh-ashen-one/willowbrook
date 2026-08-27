@@ -189,9 +189,6 @@ export class World {
 
     const mat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       vertexColors: true,
-      roughness: 1.0,
-      metalness: 0.0,
-      flatShading: false,
     });
     const ground = new THREE.Mesh(geom, mat);
     ground.receiveShadow = true;
@@ -206,8 +203,6 @@ export class World {
     waterGeom.rotateX(-Math.PI / 2);
     const waterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       color: COLORS.water,
-      roughness: 0.25,
-      metalness: 0.0,
       transparent: true,
       opacity: 0.85,
     });

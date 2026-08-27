@@ -490,7 +490,7 @@ export class Buildings {
     const water = new THREE.Mesh(
       new THREE.CylinderGeometry(1.55, 1.55, 0.04, 24),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0x9ed4f0, roughness: 0.2, metalness: 0.0,
+        color: 0x9ed4f0,
         emissive: 0x6abee5, emissiveIntensity: 0.5,
       })
     );
@@ -501,7 +501,7 @@ export class Buildings {
     const mound = new THREE.Mesh(
       new THREE.SphereGeometry(1.1, 18, 14),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0xb8e4ff, roughness: 0.15, metalness: 0.0,
+        color: 0xb8e4ff,
         emissive: 0x7acaf0, emissiveIntensity: 0.4,
       })
     );
@@ -512,7 +512,7 @@ export class Buildings {
     const waterRing = new THREE.Mesh(
       new THREE.TorusGeometry(1.55, 0.1, 12, 24),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0xb8e4ff, roughness: 0.2, metalness: 0.0,
+        color: 0xb8e4ff,
         emissive: 0x6abee5, emissiveIntensity: 0.5,
       })
     );
@@ -559,7 +559,7 @@ export class Buildings {
     }
     // Plaza lanterns — 4 short posts around the fountain
     const lanternMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-      color: 0xffe9b6, emissive: 0xffd56e, emissiveIntensity: 0.5, roughness: 0.7,
+      color: 0xffe9b6, emissive: 0xffd56e, emissiveIntensity: 0.5,
     });
     this.lanternLights = [];
     for (let i = 0; i < 4; i++) {
