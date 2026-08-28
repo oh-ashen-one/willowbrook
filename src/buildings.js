@@ -587,6 +587,11 @@ export class Buildings {
     const lanternMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       color: 0xffe9b6, emissive: PAL.doorknob, emissiveIntensity: 0.5,
     });
+    // Soft glow halo sprite — additive billboard so each lantern has a
+    // visible warm glow around the lamp, not just a sharp sphere. The
+    // texture is a soft radial gradient; AdditiveBlending adds the sprite
+    // on top of the lit scene so the glow reads as light, not paint.
+    const glowTex = this._lanternGlowTexture();
     this.lanternLights = [];
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
@@ -600,6 +605,20 @@ export class Buildings {
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), lanternMat);
       lamp.position.y = 0.95;
       post.add(lamp);
+      // Glow halo — sprite scales slightly larger than the lamp, billboarded
+      // toward camera via Sprite. AdditiveBlending so the sprite adds glow
+      // on top of the scene; depthWrite off so it doesn't write z-buffer.
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex,
+        color: 0xffcb6b,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }));
+      glow.position.y = 0.95;
+      glow.scale.set(0.85, 0.85, 1);
+      post.add(glow);
       // Point light bulb — warms the plaza at night
       const bulb = new THREE.PointLight(0xffcb6b, 0.0, 6.0, 2.0);
       bulb.position.y = 0.95;
@@ -672,6 +691,28 @@ export class Buildings {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, 256, 64);
     return new THREE.CanvasTexture(c);
+  }
+
+  _lanternGlowTexture() {
+    // Soft radial-gradient halo for the lantern glow sprite. Warm yellow
+    // fades to transparent so the sprite reads as light when additively
+    // blended over the scene. Same canvas pattern as the cloud puffs, but
+    // warmer and tighter falloff.
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 60);
+    grad.addColorStop(0,    'rgba(255, 230, 160, 0.95)');
+    grad.addColorStop(0.35, 'rgba(255, 200, 110, 0.55)');
+    grad.addColorStop(0.75, 'rgba(255, 180, 80,  0.18)');
+    grad.addColorStop(1,    'rgba(255, 180, 80,  0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    return tex;
   }
 
   _pavingTexture() {
