@@ -649,15 +649,22 @@ export class Buildings {
   }
 
   _pavingTexture() {
+    // Seeded RNG so the paving pattern is identical on every load —
+    // red-sands rule: no Math.random() for anything that ends up in a screenshot.
+    let s = 0xABCDE1 | 0;
+    const r = () => {
+      s = (s * 1664525 + 1013904223) | 0;
+      return ((s >>> 0) / 4294967296);
+    };
     const c = document.createElement('canvas');
     c.width = 256; c.height = 256;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#d6c8a8';
     ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 32; i++) {
-      const x = Math.floor(Math.random() * 16) * 16;
-      const y = Math.floor(Math.random() * 16) * 16;
-      ctx.fillStyle = `rgba(${100 + Math.random() * 60}, ${90 + Math.random() * 50}, ${60 + Math.random() * 40}, 0.5)`;
+      const x = Math.floor(r() * 16) * 16;
+      const y = Math.floor(r() * 16) * 16;
+      ctx.fillStyle = `rgba(${100 + r() * 60}, ${90 + r() * 50}, ${60 + r() * 40}, 0.5)`;
       ctx.fillRect(x, y, 14, 14);
     }
     return new THREE.CanvasTexture(c);

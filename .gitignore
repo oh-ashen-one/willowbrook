@@ -25,3 +25,5 @@ assets/models/
 
 # Editor history
 .history/
+tools/__pycache__/
+tools/*.pyc

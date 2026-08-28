@@ -5,16 +5,19 @@ import * as THREE from 'three';
 import { gradientMap } from './toon.js';
 
 const COLORS = {
-  grassA: 0x6fbf5a,
-  grassB: 0x8fd17a,
-  grassDark: 0x4f9c45,
+  // Grass palette — tuned for natural saturation (not emerald).
+  // Real grass sits ~0.30 sat; the older 0x6fbf5a was 0.53 (cartoon-emerald).
+  // Inspired by red-sands's `grass_not_emerald` gate (target 0.15–0.25).
+  grassA: 0x8aab6e,    // sun-lit grass (lower saturation, warmer)
+  grassB: 0x9bbb7c,    // bright grass variant
+  grassDark: 0x5e8048,  // shadowed grass (less neon)
   dirt: 0x9a7a4d,
   water: 0x7ec0e8,
   waterDeep: 0x4a96c2,
   trunk: 0x7a4a28,
-  leaves: 0x4f9c45,
-  leavesDark: 0x3d7e35,
-  leavesSpring: 0xa6d97e,
+  leaves: 0x5e8048,    // matches grassDark so the world reads cohesive
+  leavesDark: 0x3d5e2e,
+  leavesSpring: 0xb6c97e,
   rock: 0x8a8276,
 };
 
@@ -817,7 +820,7 @@ export class World {
       this.sun.shadow.bias = -0.0005;
       scene.add(this.sun);
 
-      this.ambient = new THREE.HemisphereLight(0xbfe2ff, 0x4f9c45, 0.55);
+      this.ambient = new THREE.HemisphereLight(0xbfe2ff, 0x6a7855, 0.55);
       scene.add(this.ambient);
 
       this.fill = new THREE.DirectionalLight(0xc6e5ff, 0.25);
@@ -911,10 +914,14 @@ export class World {
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
+    // Seeded RNG — red-sands rule #2: "no Math.random()" because it breaks
+    // screenshot reproducibility. The night sky is captured in canonical
+    // shots so it must be deterministic.
+    const starRng = mulberry32(0xC0FFEE);
     for (let i = 0; i < count; i++) {
       // Hemisphere only, far from horizon
-      const u = Math.random();
-      const v = Math.random();
+      const u = starRng();
+      const v = starRng();
       const theta = u * Math.PI * 2;
       const phi = Math.acos(0.4 + v * 0.55); // upper hemisphere with denser zenith
       const r = 250;
@@ -922,19 +929,19 @@ export class World {
       positions[i * 3 + 1] = Math.cos(phi) * r;
       positions[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
       // Subtle star-color jitter — most stars warm white, a few cooler blues
-      const warm = Math.random() < 0.7;
+      const warm = starRng() < 0.7;
       if (warm) {
         colors[i * 3 + 0] = 1.0;
-        colors[i * 3 + 1] = 0.96 + Math.random() * 0.04;
-        colors[i * 3 + 2] = 0.88 + Math.random() * 0.06;
+        colors[i * 3 + 1] = 0.96 + starRng() * 0.04;
+        colors[i * 3 + 2] = 0.88 + starRng() * 0.06;
       } else {
-        colors[i * 3 + 0] = 0.78 + Math.random() * 0.1;
-        colors[i * 3 + 1] = 0.86 + Math.random() * 0.1;
+        colors[i * 3 + 0] = 0.78 + starRng() * 0.1;
+        colors[i * 3 + 1] = 0.86 + starRng() * 0.1;
         colors[i * 3 + 2] = 1.0;
       }
       // A few sparkle stars (large), most regular
-      const sparkle = Math.random() < 0.012;
-      sizes[i] = sparkle ? 2.2 + Math.random() * 0.6 : 0.9 + Math.random() * 0.8;
+      const sparkle = starRng() < 0.012;
+      sizes[i] = sparkle ? 2.2 + starRng() * 0.6 : 0.9 + starRng() * 0.8;
     }
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));

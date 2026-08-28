@@ -23,7 +23,10 @@ class Game {
   constructor() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x6cb8e0); // sky blue, will be retinted by time
-    this.scene.fog = new THREE.Fog(0x9bd1e6, 80, 220);
+    // Aerial perspective: fog pulls distant geometry toward the sky/horizon color
+    // so depth reads naturally. Range tuned so the plaza stays crisp while
+    // the far edge of the world (~60u out) starts to haze.
+    this.scene.fog = new THREE.Fog(0xb8d6e6, 50, 180);
 
     this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 400);
     this.camera.position.set(0, 12, 14);
