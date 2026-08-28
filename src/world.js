@@ -689,6 +689,13 @@ export class World {
     // Each tuft is 4-6 crossed planes for an AC-style grass feel.
     const grassColors = [0x6fbf5a, 0x8fd17a, 0x4f9c45, 0xa3d96e];
     const tufts = 220;
+    // Wave-Racer pattern: alphaMap from value-noise so grass blades have
+    // organic noise variation in opacity — not every blade looks identical.
+    // One shared canvas, per-tuft UV offset samples a different patch.
+    // Texture.clone() shares image data but per-instance offset/repeat, so
+    // 220 cheap clones (no extra image uploads).
+    const grassAlpha = makeNoiseTexture(64, 6, 4);
+    grassAlpha.repeat.set(2, 2);
     for (let i = 0; i < tufts; i++) {
       const x = (this.rng() - 0.5) * (this.size - 14);
       const z = (this.rng() - 0.5) * (this.size - 18);
@@ -699,14 +706,26 @@ export class World {
       const tuft = new THREE.Group();
       const blades = 3 + Math.floor(this.rng() * 4);
       const baseColor = grassColors[Math.floor(this.rng() * grassColors.length)];
+      // Per-tuft UV offset — each tuft samples a different noise patch so
+      // no two tufts look identical even though they share one texture.
+      const uOff = this.rng() * 10;
+      const vOff = this.rng() * 10;
+      // Per-tuft opacity variation in addition to per-pixel noise — some
+      // tufts read as denser clumps, others as sparse wisps.
+      const tuftOpacity = 0.65 + this.rng() * 0.35;
       for (let b = 0; b < blades; b++) {
         const h = 0.18 + this.rng() * 0.18;
+        const alphaClone = grassAlpha.clone();
+        alphaClone.offset.set(uOff + this.rng() * 0.3, vOff + this.rng() * 0.3);
         const blade = new THREE.Mesh(
           new THREE.PlaneGeometry(0.06, h),
           new THREE.MeshToonMaterial({
             gradientMap: gradientMap(3),
             color: baseColor,
             side: THREE.DoubleSide,
+            alphaMap: alphaClone,
+            transparent: true,
+            opacity: tuftOpacity,
           })
         );
         blade.position.set(
