@@ -37,6 +37,10 @@ export const HEX = {
   skyNight:    0x2a3a6a,
   skyNightBot: 0x4a5a8a,
   fog:         0xb8d6e6,
+  // cloudLit: pure white for eye whites / awning stripes. Off-white reads
+  // slightly warm under the toon gradient (avoids the chalky look pure 0xfff
+  // gets under the sky IBL).
+  cloudLit:    0xfafafa,
 
   // ── Trees ───────────────────────────────────────────────────────────────
   trunk:         0x7a4a28,
@@ -67,6 +71,9 @@ export const HEX = {
   shutterTrim: 0x2a5a2a,
   chimney:     0x7a5040,
   brick:       0x9a5a3a,
+  // hull0: shop awning red. The single saturated red in the buildings section
+  // — everything else is warm earth tones so the awning reads as "shop".
+  hull0:       0xff5e5e,
 
   // ── Fence / ground trim ──────────────────────────────────────────────────
   fence:       0xeacfa8,
@@ -112,6 +119,10 @@ export const HEX = {
   villagerFurSquirrel: 0xc06a3a,
   villagerSnoutSquirrel: 0xeab084,
   villagerShirtSquirrel: 0x9a6bd1,
+  // skin: warm cream used for the Bunny Day NPC fur. Lives here rather than
+  // hard-coded inside npc.js so a future palette tweak (e.g. make the bunny
+  // pinkish instead of cream) is one-line.
+  skin:            0xf5e6c8,
 
   // ── HUD / interactive ───────────────────────────────────────────────────
   hudInk:    0x081426,

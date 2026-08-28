@@ -332,7 +332,10 @@ export class World {
     const trunkH = type.trunkH;
     const trunkRTaper = type.type === 'birch' ? 0.10 : 0.18;
     const trunkRBase = type.type === 'birch' ? 0.14 : (type.type === 'cedar' ? 0.20 : 0.32);
-    const trunkG = new THREE.CylinderGeometry(trunkRTaper, trunkRBase, trunkH, 8);
+    // Bumped from 8 → 12 segments: at trunkH ~2.0–3.5 the 8-sided cylinder
+    // read as a visible octagon silhouette from low camera angles. 12 sides
+    // are smooth enough to read as round at any distance.
+    const trunkG = new THREE.CylinderGeometry(trunkRTaper, trunkRBase, trunkH, 12);
     const trunk = new THREE.Mesh(trunkG, trunkM);
     trunk.position.y = trunkH / 2;
     trunk.castShadow = true; trunk.receiveShadow = true;
@@ -343,7 +346,7 @@ export class World {
     for (let i = 0; i < rootCount; i++) {
       const a = (i / rootCount) * Math.PI * 2 + this.rng() * 0.5;
       const root = new THREE.Mesh(
-        new THREE.SphereGeometry(0.32 + this.rng() * 0.08, 8, 6),
+        new THREE.SphereGeometry(0.32 + this.rng() * 0.08, 10, 8),
         trunkM
       );
       root.position.set(Math.cos(a) * 0.28, 0.18, Math.sin(a) * 0.28);
@@ -387,75 +390,100 @@ export class World {
 
     if (type.type === 'cedar') {
       // Pine / cedar — tall conical tiers stacked
+      // Pattern lifted from Wave-Racer: cones with Y-rotation jitter so each
+      // tier's facets don't all line up the same way — kills the "stacked
+      // wedding cake" look. Bumped 8 → 12 radial segments so silhouettes
+      // are smooth at our camera distance.
       const tiers = 5;
       for (let i = 0; i < tiers; i++) {
         const t = i / (tiers - 1);
         const r = (1.5 - t * 1.0) * type.canopyScale;
-        const g = new THREE.ConeGeometry(r, r * 0.9, 8);
+        const g = new THREE.ConeGeometry(r, r * 0.9, 12);
         const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMatDeep : canopyMat);
         m.position.y = trunkH + 0.3 + i * (r * 0.55);
+        // Y rotation jitter breaks the radial alignment between tiers
+        m.rotation.y = this.rng() * Math.PI * 2;
         m.castShadow = true; m.receiveShadow = true;
         group.add(m);
       }
     } else if (type.type === 'birch') {
       // Birch — slim drooping canopy with sparse leaf clusters
+      // Bumped 8/6 → 12/8 for rounder silhouette. Per-cluster Y rotation
+      // jitter so adjacent clumps don't face the same way.
       const clusterCount = 6;
       for (let i = 0; i < clusterCount; i++) {
         const a = this.rng() * Math.PI * 2;
         const y = trunkH + this.rng() * 1.0;
         const r = (0.5 + this.rng() * 0.3) * type.canopyScale;
-        const g = new THREE.SphereGeometry(r, 8, 6);
+        const g = new THREE.SphereGeometry(r, 12, 8);
         const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMat : canopyMatAlt);
         m.position.set(Math.cos(a) * 0.3, y, Math.sin(a) * 0.3);
         m.scale.y = 0.7;
+        m.rotation.y = this.rng() * Math.PI * 2;
         m.castShadow = true;
         group.add(m);
       }
       // Drooping branches at the bottom of the canopy
+      // Math.random() → this.rng() per red-sands discipline
+      // (seeded RNG so a scene reproduces identically across captures).
       for (let i = 0; i < 3; i++) {
         const a = this.rng() * Math.PI * 2;
-        const drip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.6, 4), trunkM);
+        const drip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.6, 6), trunkM);
         drip.position.set(Math.cos(a) * 0.4, trunkH - 0.2, Math.sin(a) * 0.4);
-        drip.rotation.z = (Math.random() - 0.5) * 0.4;
-        drip.rotation.x = (Math.random() - 0.5) * 0.4;
+        drip.rotation.z = (this.rng() - 0.5) * 0.4;
+        drip.rotation.x = (this.rng() - 0.5) * 0.4;
         group.add(drip);
       }
     } else if (type.type === 'fruit') {
       // Fruit tree — small dense canopy with VISIBLE fruits
-      // Main canopy blob
-      const g = new THREE.SphereGeometry(type.canopyScale * 0.9, 10, 8);
-      const m = new THREE.Mesh(g, canopyMat);
-      m.position.y = trunkH + 0.5;
-      m.scale.set(1.1, 0.85, 1.1);
-      m.castShadow = true; m.receiveShadow = true;
-      group.add(m);
-      // Smaller bumps around it
+      // Main canopy as icosahedron — same Wave-Racer pattern as oak/spring/
+      // autumn: faceted mass catches the cel terminator at varied angles so
+      // it reads as a clump of leaves rather than a smooth ball.
+      const mainG = new THREE.IcosahedronGeometry(type.canopyScale * 0.9, 1);
+      const main = new THREE.Mesh(mainG, canopyMat);
+      main.position.y = trunkH + 0.5;
+      main.scale.set(1.1, 0.85, 1.1);
+      main.rotation.y = this.rng() * Math.PI * 2;
+      main.castShadow = true; main.receiveShadow = true;
+      group.add(main);
+      // Smaller bumps around it — bumped 8/6 → 10/8 for rounder silhouette
       for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * Math.PI * 2;
-        const bump = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), canopyMatAlt);
+        const a = (i / 5) * Math.PI * 2 + this.rng() * 0.4;
+        const bump = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), canopyMatAlt);
         bump.position.set(Math.cos(a) * 0.5, trunkH + 0.5 + (this.rng() - 0.5) * 0.3, Math.sin(a) * 0.5);
+        bump.rotation.y = this.rng() * Math.PI * 2;
         bump.castShadow = true;
         group.add(bump);
       }
-      // Fruits — many visible red apples
+      // Fruits — many visible red apples. Bumped 8/6 → 10/8 so apples read
+      // round rather than blocky at close camera angles.
       const fruitColor = 0xd63a2c;
       const fruitMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: fruitColor });
       for (let i = 0; i < 14; i++) {
         const a = this.rng() * Math.PI * 2;
         const r = 0.6 + this.rng() * 0.5;
         const y = trunkH + 0.3 + this.rng() * 0.8;
-        const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), fruitMat);
+        const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 8), fruitMat);
         fruit.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
         fruit.castShadow = true;
         group.add(fruit);
       }
     } else {
-      // Oak / spring / autumn — wide lobed canopy with side lobes
+      // Oak / spring / autumn — wide lobed canopy with side lobes.
+      // Pattern lifted from gillworks/Vyom-26/Wave-Racer: use icosahedron
+      // geometry on the larger masses (faceted organic silhouettes) and
+      // bumped sphere segments on the smaller clusters (rounder silhouette
+      // at distance). The 8-segment spheres we used before were visible as
+      // octagons — that's the "blobby trees" complaint.
       const baseR = type.canopyScale * 1.25;
       const layers = 2;
       for (let i = 0; i < layers; i++) {
         const r = baseR * (1.0 - i * 0.18);
-        const g = new THREE.SphereGeometry(r, 12, 10);
+        // Icosahedron for big masses — its triangular faces catch the cel
+        // terminator at varied angles, so the canopy reads as a clump of
+        // leaves rather than a sphere. Detail 2 is enough at our camera
+        // distance; bumping it would add tris for no visible gain.
+        const g = new THREE.IcosahedronGeometry(r, 1);
         const mat = i === 0 ? canopyMatDeep : (i % 2 === 1 ? canopyMat : canopyMatAlt);
         const m = new THREE.Mesh(g, mat);
         m.position.set(
@@ -463,46 +491,54 @@ export class World {
           trunkH + i * 0.5 + 0.1,
           (this.rng() - 0.5) * 0.3,
         );
+        // Per-cluster rotation jitter so adjacent clumps don't all face the
+        // same way. Random Y-axis spin is enough for organic silhouette.
+        m.rotation.y = this.rng() * Math.PI * 2;
         m.scale.set(1 + this.rng() * 0.15, 0.75 + this.rng() * 0.2, 1 + this.rng() * 0.15);
         m.castShadow = true; m.receiveShadow = true;
         group.add(m);
       }
-      // Side lobes
+      // Side lobes — 16-segment spheres for rounder silhouette at the edge
       const lobeCount = 6;
       for (let i = 0; i < lobeCount; i++) {
         const a = (i / lobeCount) * Math.PI * 2 + this.rng() * 0.4;
         const r = baseR * (0.55 + this.rng() * 0.2);
-        const g = new THREE.SphereGeometry(r, 10, 8);
+        const g = new THREE.SphereGeometry(r, 12, 8);
         const m = new THREE.Mesh(g, i % 2 === 0 ? canopyMat : canopyMatAlt);
         m.position.set(
           Math.cos(a) * (baseR * 0.6),
           trunkH + 0.35 + this.rng() * 0.35,
           Math.sin(a) * (baseR * 0.6),
         );
+        m.rotation.y = this.rng() * Math.PI * 2;
         m.castShadow = true;
         group.add(m);
       }
-      // Crown blob at the very top
-      const crown = new THREE.Mesh(new THREE.SphereGeometry(baseR * 0.5, 10, 8), canopyMat);
+      // Crown blob at the very top — icosahedron for the same reason
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(baseR * 0.5, 1), canopyMat);
       crown.position.set(
         (this.rng() - 0.5) * 0.3,
         trunkH + layers * 0.5 + 0.3,
         (this.rng() - 0.5) * 0.3,
       );
+      crown.rotation.y = this.rng() * Math.PI * 2;
       crown.castShadow = true;
       group.add(crown);
 
       // Leaf clusters at branch tips — small tight spheres
+      // Bumped 8/6 → 10/8 for rounder silhouette at close camera angles.
       for (const b of branches) {
         const leafR = 0.25 + this.rng() * 0.15;
-        const cluster = new THREE.Mesh(new THREE.SphereGeometry(leafR, 8, 6), canopyMatAlt);
+        const cluster = new THREE.Mesh(new THREE.SphereGeometry(leafR, 10, 8), canopyMatAlt);
         cluster.position.set(b.x, b.y + 0.1, b.z);
+        cluster.rotation.y = this.rng() * Math.PI * 2;
         cluster.castShadow = true;
         group.add(cluster);
         // Tiny accent
         if (this.rng() < 0.5) {
-          const accent = new THREE.Mesh(new THREE.SphereGeometry(leafR * 0.7, 8, 6), canopyMatDeep);
+          const accent = new THREE.Mesh(new THREE.SphereGeometry(leafR * 0.7, 10, 8), canopyMatDeep);
           accent.position.set(b.x + 0.1, b.y + 0.2, b.z + 0.1);
+          accent.rotation.y = this.rng() * Math.PI * 2;
           accent.castShadow = true;
           group.add(accent);
         }
@@ -604,13 +640,15 @@ export class World {
       stone.receiveShadow = true;
       this.pathGroup.add(stone);
       // Tiny pebbles alongside for organic feel
+      // Math.random() → this.rng() per red-sands discipline — seeded RNG so
+      // pebbles reproduce identically across captures.
       if (i % 2 === 0) {
         for (let k = 0; k < 3; k++) {
-          const px = p.x + (Math.random() - 0.5) * 2.6;
-          const pz = p.z + (Math.random() - 0.5) * 2.0;
+          const px = p.x + (this.rng() - 0.5) * 2.6;
+          const pz = p.z + (this.rng() - 0.5) * 2.0;
           const py = this.heightAt(px, pz) + 0.035;
           const peb = new THREE.Mesh(
-            new THREE.SphereGeometry(0.05 + Math.random() * 0.05, 5, 4),
+            new THREE.SphereGeometry(0.05 + this.rng() * 0.05, 6, 5),
             pathMat
           );
           peb.position.set(px, py, pz);
