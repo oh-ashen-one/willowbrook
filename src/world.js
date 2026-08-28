@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { gradientMap } from './toon.js';
 import { HEX as PAL } from './core/palette.js';
+import { makeNoiseTexture } from './core/noise.js';
 
 // COLORS is kept as a thin local re-export so downstream code (buildings.js,
 // npc.js) keeps working. The single source of truth lives in
@@ -123,6 +124,10 @@ export class World {
   }
 
   _cloudTexture() {
+    // Cloud puff: a soft radial-gradient core, multiplied by a value-noise
+    // mask so the silhouette is broken up into a clump of bumps rather than
+    // a perfect disc. Wave-Racer's noise texture pattern — same idea as
+    // their ocean sparkle mask and foam break-up, just painted as cloud.
     const c = document.createElement('canvas');
     c.width = c.height = 128;
     const ctx = c.getContext('2d');
@@ -134,7 +139,18 @@ export class World {
     ctx.beginPath();
     ctx.arc(64, 64, 60, 0, Math.PI * 2);
     ctx.fill();
-    return new THREE.CanvasTexture(c);
+    // Layer the noise on top using 'destination-in' so it carves organic
+    // holes into the gradient silhouette. The result is a cloud that reads
+    // as a clump of overlapping puffs, not a round stamp.
+    const noise = makeNoiseTexture(128, 8, 4);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(noise.image, 0, 0, 128, 128);
+    ctx.globalCompositeOperation = 'source-over';
+    const tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    return tex;
   }
 
   _buildSkyDome() {
