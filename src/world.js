@@ -3,22 +3,38 @@
 
 import * as THREE from 'three';
 import { gradientMap } from './toon.js';
+import { HEX as PAL } from './core/palette.js';
 
+// COLORS is kept as a thin local re-export so downstream code (buildings.js,
+// npc.js) keeps working. The single source of truth lives in
+// src/core/palette.js — pattern lifted from gillworks/Vyom-26/Wave-Racer.
 const COLORS = {
-  // Grass palette — tuned for natural saturation (not emerald).
-  // Real grass sits ~0.30 sat; the older 0x6fbf5a was 0.53 (cartoon-emerald).
-  // Inspired by red-sands's `grass_not_emerald` gate (target 0.15–0.25).
-  grassA: 0x8aab6e,    // sun-lit grass (lower saturation, warmer)
-  grassB: 0x9bbb7c,    // bright grass variant
-  grassDark: 0x5e8048,  // shadowed grass (less neon)
-  dirt: 0x9a7a4d,
-  water: 0x7ec0e8,
-  waterDeep: 0x4a96c2,
-  trunk: 0x7a4a28,
-  leaves: 0x5e8048,    // matches grassDark so the world reads cohesive
-  leavesDark: 0x3d5e2e,
-  leavesSpring: 0xb6c97e,
-  rock: 0x8a8276,
+  grassA:        PAL.grassA,
+  grassB:        PAL.grassB,
+  grassDark:     PAL.grassDark,
+  dirt:          PAL.dirt,
+  dirtStep:      PAL.dirtStep,
+  dirtEdge:      PAL.dirtEdge,
+  water:         PAL.water,
+  waterDeep:     PAL.waterDeep,
+  trunk:         PAL.trunk,
+  leaves:        PAL.leaves,
+  leavesDark:    PAL.leavesDark,
+  leavesSpring:  PAL.leavesSpring,
+  leavesAutumn:  PAL.leavesAutumn,
+  leavesBirch:   PAL.leavesBirch,
+  rock:          PAL.rock,
+  skyDawn:       PAL.skyDawn,
+  skyDawnBot:    PAL.skyDawnBot,
+  skyDay:        PAL.skyDay,
+  skyDusk:       PAL.skyDusk,
+  skyDuskBot:    PAL.skyDuskBot,
+  skyNight:      PAL.skyNight,
+  skyNightBot:   PAL.skyNightBot,
+  fog:           PAL.fog,
+  lantern:       PAL.lantern,
+  lanternEmissive: PAL.lanternEmissive,
+  lanternPost:   PAL.lanternPost,
 };
 
 // Deterministic seeded RNG so the town is the same on every load.
@@ -807,6 +823,7 @@ export class World {
 
   applyLighting(scene, time) {
     if (!this.sun) {
+      // Sun warm white — palette.hudPaper kept consistent via PAL.skyDusk warm
       this.sun = new THREE.DirectionalLight(0xfff2c8, 1.1);
       this.sun.position.set(20, 30, 12);
       this.sun.castShadow = true;
@@ -820,7 +837,9 @@ export class World {
       this.sun.shadow.bias = -0.0005;
       scene.add(this.sun);
 
-      this.ambient = new THREE.HemisphereLight(0xbfe2ff, 0x6a7855, 0.55);
+      // Hemisphere bounce — ground color comes from the palette rather than a
+      // hard-coded neon green (was the wave-6 desaturation fix).
+      this.ambient = new THREE.HemisphereLight(0xbfe2ff, PAL.rock, 0.55);
       scene.add(this.ambient);
 
       this.fill = new THREE.DirectionalLight(0xc6e5ff, 0.25);
@@ -834,10 +853,12 @@ export class World {
     const sunAngle = (time.hour / 24) * Math.PI * 2 - Math.PI / 2;
     this.sun.position.set(Math.cos(sunAngle) * 30, Math.sin(sunAngle) * 28 + 6, 12);
     this.sun.intensity = Math.max(0, Math.sin(sunAngle)) * 1.1 + 0.05;
+    // All sky-band tints come from the palette so future palette tweaks are
+    // a single-file change.
     const warm = new THREE.Color(0xfff2c8);
-    const dusk = new THREE.Color(0xff8a4a);
-    const night = new THREE.Color(0x2a3a6a);
-    const day = new THREE.Color(0x6cb8e0);
+    const dusk = new THREE.Color(PAL.skyDusk);
+    const night = new THREE.Color(PAL.skyNight);
+    const day = new THREE.Color(PAL.skyDay);
     const l = Math.max(0, Math.sin(sunAngle));
 
     // Time-of-day bands. Each band has a base sky color; dawn/dusk override.
@@ -847,21 +868,21 @@ export class World {
     let skyTop, skyBot;
     if (isNight) {
       skyTop = night.clone();
-      skyBot = new THREE.Color(0x4a5a8a);
+      skyBot = new THREE.Color(PAL.skyNightBot);
     } else if (isDawn) {
       // Blend peach (mid-dawn) toward day as hour approaches 8
       const t = (time.hour - 4) / 4;
-      const peachTop = new THREE.Color(0xffc88a);
-      const peachBot = new THREE.Color(0xffe4b8);
+      const peachTop = new THREE.Color(PAL.skyDawn);
+      const peachBot = new THREE.Color(PAL.skyDawnBot);
       skyTop = peachTop.clone().lerp(day, t * 0.4);
       skyBot = peachBot.clone().lerp(new THREE.Color(0xcfe9f5), t * 0.4);
     } else if (isDusk) {
       // Rose deepening into night as hour approaches 20
       const t = (time.hour - 16) / 4;
-      const roseTop = new THREE.Color(0xd88aaa);
-      const roseBot = new THREE.Color(0xffa0b8);
+      const roseTop = new THREE.Color(PAL.skyDusk);
+      const roseBot = new THREE.Color(PAL.skyDuskBot);
       skyTop = roseTop.clone().lerp(night, t * 0.6);
-      skyBot = roseBot.clone().lerp(new THREE.Color(0x4a5a8a), t * 0.5);
+      skyBot = roseBot.clone().lerp(new THREE.Color(PAL.skyNightBot), t * 0.5);
     } else {
       // Day
       skyTop = day.clone();

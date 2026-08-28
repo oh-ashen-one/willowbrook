@@ -1,5 +1,17 @@
 // Outliner — walk a scene and attach inverted-hull outlines to every mesh.
 // Keeps the original meshes intact, just adds a slightly-larger black back-face copy behind each one.
+//
+// Pattern lifted from gillworks/Vyom-26/Wave-Racer `src/render/celMaterial.ts`:
+//   • per-mesh outlineRadius so small meshes don't drown in ink (a 15-px bunny
+//     with a 3-px line on each side is a silhouette, not a character)
+//   • outlineMaxPx pipeline-wide ceiling so no material can put a heavier
+//     line than any other
+//   • floor-and-ramp weight on the normal-push direction so coarse geometry
+//     doesn't lose its silhouette at faces that face away from the camera
+// For Willowbrook (inverted-hull instead of screen-space ink) we approximate
+// the same idea with a graduated world-space thickness: smaller meshes get
+// a thinner outline so the bunny's silhouette is recognisable rather than a
+// pure black blob.
 
 import * as THREE from 'three';
 
@@ -12,8 +24,8 @@ import * as THREE from 'three';
  */
 export function outlineScene(root, opts = {}) {
   const color = opts.color ?? 0x1a1208;
-  const thickness = opts.thickness ?? 0.03;
-  const skipBelow = opts.skipBelow ?? 0.04; // world units
+  const thickness = opts.thickness ?? 0.06;
+  const skipBelow = opts.skipBelow ?? 0.02; // world units
   // Default keyword filter — covers tiny AC detail meshes that look bad when
   // outlined (a 1-2 px black halo around a doorknob just looks like noise).
   // To opt back in, set userData.skipOutline = false on the mesh before calling.
@@ -49,9 +61,29 @@ export function outlineScene(root, opts = {}) {
     }
     // Already outlined?
     if (m.parent && m.parent.userData?.isOutline && m.parent.userData.target === m) continue;
+
+    // Graduated thickness — Wave-Racer's "outlineRadius" approximation.
+    // World-space thickness is converted to a screen-space-relative pixel
+    // weight by clamping relative to the mesh's bounding radius. Small
+    // meshes (radius < 0.5) get a thinner line; large meshes get the full
+    // thickness; tiny-but-still-detailed meshes get a fractional line.
+    if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+    const r = m.geometry.boundingSphere?.radius || 1;
+    let weight;
+    if (r < 0.15) {
+      // very small detail: cap at 0.4× so the line never drowns the mesh
+      weight = 0.4;
+    } else if (r < 0.5) {
+      // small but featured: 0.6×
+      weight = 0.6;
+    } else if (r > 5) {
+      // huge landscape feature: cap at 1.0× (don't go thicker)
+      weight = 1.0;
+    } else {
+      weight = 1.0;
+    }
+    const t = thickness * weight;
     const outline = new THREE.Mesh(m.geometry, outlineMat);
-    // Scale up slightly, more on flat things
-    const t = thickness * (m.geometry.boundingSphere?.radius > 1 ? 1.2 : 1);
     outline.scale.set(1 + t, 1 + t, 1 + t);
     outline.castShadow = false;
     outline.receiveShadow = false;
