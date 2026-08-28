@@ -76,9 +76,12 @@ export class Buildings {
     this._addPlankSiding(g, width, depth);
 
     // Eave trim — a thin band running along the wall top, color of roof
+    // Wave-Racer pattern: small Y rotation jitter on every eave plank so two
+    // cottages side-by-side don't look stamped from the same mold.
     const trimMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding });
     const eaveFront = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, 0.12, 0.18), trimMat);
     eaveFront.position.set(0, 1.86, depth / 2 + 0.08);
+    eaveFront.rotation.y = (this._rng() - 0.5) * 0.04;
     eaveFront.castShadow = true;
     g.add(eaveFront);
     const eaveBack = eaveFront.clone();
@@ -86,6 +89,7 @@ export class Buildings {
     g.add(eaveBack);
     const eaveLeft = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, depth + 0.6), trimMat);
     eaveLeft.position.set(-(width / 2 + 0.08), 1.86, 0);
+    eaveLeft.rotation.y = (this._rng() - 0.5) * 0.04;
     eaveLeft.castShadow = true;
     g.add(eaveLeft);
     const eaveRight = eaveLeft.clone();
@@ -110,6 +114,9 @@ export class Buildings {
     );
     ridgeCap.position.set(0, 2 * roofH + 0.05, 0);
     ridgeCap.rotation.z = Math.PI / 2;
+    // Y rotation jitter so the ridge cap isn't always perfectly aligned with
+    // the world axes.
+    ridgeCap.rotation.y = this._rng() * Math.PI * 2;
     g.add(ridgeCap);
 
     // Brick chimney with cap
@@ -119,6 +126,9 @@ export class Buildings {
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: brickColor })
     );
     chim.position.set(width * 0.30, 2.85, depth * 0.15);
+    // Y rotation jitter — chimneys look hand-built when each one is a tiny
+    // bit crooked vs the perfectly axis-aligned default.
+    chim.rotation.y = (this._rng() - 0.5) * 0.15;
     chim.castShadow = true; chim.receiveShadow = true;
     g.add(chim);
     const chimneyCap = new THREE.Mesh(
@@ -126,6 +136,7 @@ export class Buildings {
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.roof })
     );
     chimneyCap.position.set(width * 0.30, 3.45, depth * 0.15);
+    chimneyCap.rotation.y = chim.rotation.y;
     g.add(chimneyCap);
 
     return g;
@@ -317,6 +328,7 @@ export class Buildings {
     this.list.push(g);
 
     // Mailbox in front (toward plaza)
+    // Y rotation jitter so the post doesn't always face perfectly square.
     const mb = new THREE.Group();
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding }));
     post.position.y = 0.5;
@@ -324,6 +336,7 @@ export class Buildings {
     box.position.set(0, 1.05, 0.05);
     mb.add(post, box);
     mb.position.set(0, g.position.y, 10 - 2.3);
+    mb.rotation.y = (this._rng() - 0.5) * 0.4;
     mb.castShadow = true;
     this.scene.add(mb);
   }
@@ -365,6 +378,8 @@ export class Buildings {
       }
     }
     // Picket posts every 0.4 units around the ring
+    // Wave-Racer pattern: tiny Y rotation jitter on every picket so the
+    // fence ring isn't a perfectly regular polygon.
     const totalArc = 2 * Math.PI * r;
     const picketStep = 0.4;
     const pickets = Math.floor(totalArc / picketStep);
@@ -372,41 +387,47 @@ export class Buildings {
       const a = (p / pickets) * Math.PI * 2;
       const px = g.position.x + Math.cos(a) * r;
       const pz = g.position.z + Math.sin(a) * r;
+      const picketJitter = (this._rng() - 0.5) * 0.06;
       const picket = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.04), fenceMat);
       picket.position.set(px, g.position.y + 0.35, pz);
-      picket.rotation.y = a + Math.PI / 2; // face inward/outward
+      picket.rotation.y = a + Math.PI / 2 + picketJitter; // face inward/outward + jitter
       picket.castShadow = true;
       this.scene.add(picket);
       const cap = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), fenceMat);
       cap.position.set(px, g.position.y + 0.74, pz);
-      cap.rotation.y = a;
+      cap.rotation.y = a + picketJitter;
       this.scene.add(cap);
     }
   }
 
   _makeShop(pos, name, roofColor, wallColor) {
     const g = this._makeBuildingShell(6.0, 4.5, wallColor, roofColor);
-    // Awning
+    // Awning — Y rotation jitter so the awning hangs at a tiny tilt, not
+    // perfectly axis-aligned. Wave-Racer pattern: every hand-built detail
+    // gets a small per-instance rotation.
     const awningMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.hull0 });
     const awning = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.12, 1.2), awningMat);
     awning.position.set(0, 1.85, 2.65);
     awning.rotation.x = -Math.PI / 8;
+    awning.rotation.y = (this._rng() - 0.5) * 0.05;
     awning.castShadow = true;
     g.add(awning);
-    // Awning stripes
+    // Awning stripes — match awning rotation so they read as one piece
     const stripeMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit });
     for (let i = 0; i < 6; i++) {
       const s = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.13, 1.2), stripeMat);
       s.position.set(-2.5 + i, 1.86, 2.65);
       s.rotation.x = -Math.PI / 8;
+      s.rotation.y = awning.rotation.y;
       g.add(s);
     }
-    // Sign
+    // Sign — Y rotation jitter, sign face follows sign
     const signBg = new THREE.Mesh(
       new THREE.BoxGeometry(3.2, 0.8, 0.1),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.doorInset })
     );
     signBg.position.set(0, 2.4, 2.3);
+    signBg.rotation.y = (this._rng() - 0.5) * 0.05;
     g.add(signBg);
     // Sign text simulated by textured plane
     const signTex = this._textSignTexture(name, 0xffe9a8);
@@ -415,6 +436,7 @@ export class Buildings {
       new THREE.MeshBasicMaterial({ map: signTex })
     );
     signFace.position.set(0, 2.4, 2.36);
+    signFace.rotation.y = signBg.rotation.y;
     g.add(signFace);
 
     this._makeDoor(g, 0, 2.27);
