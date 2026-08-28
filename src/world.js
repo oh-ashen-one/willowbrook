@@ -236,10 +236,19 @@ export class World {
     // River/pond on the south edge.
     const waterGeom = new THREE.PlaneGeometry(60, 22, 32, 16);
     waterGeom.rotateX(-Math.PI / 2);
+    // Wave-Racer's noise-as-water-mask pattern: alphaMap is value-noise so
+    // the pond reads as a dappled surface instead of a flat blue disc.
+    // alphaMap multiplies against material opacity — dark noise = thinner
+    // water (you glimpse the bottom), bright noise = full water. Tiled
+    // 6x3 across the 60x22 plane gives ~10-unit cells, which feels like
+    // wind-ripple scale from camera distance.
+    const waterAlpha = makeNoiseTexture(128, 8, 4);
+    waterAlpha.repeat.set(6, 3);
     const waterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
       color: COLORS.water,
+      alphaMap: waterAlpha,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.92,
     });
     const water = new THREE.Mesh(waterGeom, waterMat);
     water.position.set(0, -0.4, -38);
