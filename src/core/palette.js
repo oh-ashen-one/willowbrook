@@ -118,6 +118,7 @@ export const HEX = {
   hudPaper:  0xf2fbff,
   hotbarBg:  0xfff8e7,
   hotbarSel: 0xe0a872,
+  heartPink: 0xff7aa8,   // heart puff above villager head when gifted
 
   // ── Outlines ────────────────────────────────────────────────────────────
   // The outline pass renders the whole image at thickness 0.06 — palette kept

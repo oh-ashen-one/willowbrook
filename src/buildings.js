@@ -3,7 +3,11 @@
 
 import * as THREE from 'three';
 import { gradientMap } from './toon.js';
+import { HEX as PAL } from './core/palette.js';
 
+// Roof and wall colour *instances* (six reds for the cottage roofs, four creams
+// for the cottage walls). Per-instance values — kept inline. Palette tones
+// (one-off semantic colours) flow through PAL.x.
 const ROOF_COLORS = [0xc44a3a, 0x4a8fd1, 0xc49a3a, 0x6ac44a, 0x9a4ac4, 0xd16a8f];
 const WALL_COLORS = [0xf2d6a8, 0xeac9a3, 0xddc6a4, 0xeed7b0];
 
@@ -39,7 +43,7 @@ export class Buildings {
 
     // Public buildings
     this._makeShop({ x: 6, z: -16 }, "Nook's Nook", 0x4a8fd1, 0xf6e0a8);
-    this._makeMuseum({ x: -24, z: 4 }, 'Museum', 0x8a6a4a, 0xeacfa8);
+    this._makeMuseum({ x: -24, z: 4 }, 'Museum', 0x8a6a4a, PAL.fence);
 
     // Signpost near the plaza
     this._makeSignpost();
@@ -55,7 +59,7 @@ export class Buildings {
     // Foundation (stone slab slightly wider than walls)
     const found = new THREE.Mesh(
       new THREE.BoxGeometry(width + 0.5, 0.2, depth + 0.5),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xa48a6a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.windowGlass })
     );
     found.position.y = 0.1;
     found.receiveShadow = true; found.castShadow = true;
@@ -72,7 +76,7 @@ export class Buildings {
     this._addPlankSiding(g, width, depth);
 
     // Eave trim — a thin band running along the wall top, color of roof
-    const trimMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
+    const trimMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding });
     const eaveFront = new THREE.Mesh(new THREE.BoxGeometry(width + 0.6, 0.12, 0.18), trimMat);
     eaveFront.position.set(0, 1.86, depth / 2 + 0.08);
     eaveFront.castShadow = true;
@@ -102,14 +106,14 @@ export class Buildings {
     // Roof ridge cap — long thin cylinder along the peak
     const ridgeCap = new THREE.Mesh(
       new THREE.CylinderGeometry(0.06, 0.06, width + 1.1, 6),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a3a20 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.roof })
     );
     ridgeCap.position.set(0, 2 * roofH + 0.05, 0);
     ridgeCap.rotation.z = Math.PI / 2;
     g.add(ridgeCap);
 
     // Brick chimney with cap
-    const brickColor = 0xb85a4a;
+    const brickColor = PAL.brick;
     const chim = new THREE.Mesh(
       new THREE.BoxGeometry(0.5, 1.1, 0.5),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: brickColor })
@@ -119,7 +123,7 @@ export class Buildings {
     g.add(chim);
     const chimneyCap = new THREE.Mesh(
       new THREE.BoxGeometry(0.65, 0.1, 0.65),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a3a20 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.roof })
     );
     chimneyCap.position.set(width * 0.30, 3.45, depth * 0.15);
     g.add(chimneyCap);
@@ -129,7 +133,7 @@ export class Buildings {
 
   // Vertical wood plank lines etched into the wall surface
   _addPlankSiding(g, width, depth) {
-    const lineMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a });
+    const lineMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wood });
     const plankCount = Math.floor(width / 0.18);
     for (let i = 0; i <= plankCount; i++) {
       const x = -width / 2 + i * 0.18;
@@ -187,7 +191,7 @@ export class Buildings {
     // Recessed doorway — frame set INTO the wall (negative z), door recessed behind frame
     const frame = new THREE.Mesh(
       new THREE.BoxGeometry(1.05, 1.5, 0.1),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x5a3a1a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.windowFrame })
     );
     frame.position.set(0, 0.75, -0.02);
     frame.castShadow = true;
@@ -195,19 +199,19 @@ export class Buildings {
     // Threshold step
     const threshold = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.08, 0.4),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a8a7a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     threshold.position.set(0, 0.04, 0.15);
     g.add(threshold);
     // Door panel (recessed)
     const door = new THREE.Mesh(
       new THREE.BoxGeometry(0.7, 1.2, 0.06),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a2a1a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.doorInset })
     );
     door.position.set(0, 0.6, -0.005);
     g.add(door);
     // Door inset panels (two horizontal raised rectangles — a classic door detail)
-    const insetMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a });
+    const insetMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wood });
     const inset1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.01), insetMat);
     inset1.position.set(0, 0.85, 0.026);
     g.add(inset1);
@@ -217,7 +221,7 @@ export class Buildings {
     // Brass doorknob
     const knob = new THREE.Mesh(
       new THREE.SphereGeometry(0.05, 8, 6),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffd56e, emissive: 0xffd56e, emissiveIntensity: 0.3 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.doorknob, emissive: PAL.doorknob, emissiveIntensity: 0.3 })
     );
     knob.name = 'doorknob';
     knob.userData.skipOutline = true;
@@ -226,7 +230,7 @@ export class Buildings {
     // Stepping stone in front
     const step = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 0.05, 0.25),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a8a7a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     step.position.set(0, 0.025, 0.4);
     g.add(step);
@@ -238,10 +242,10 @@ export class Buildings {
   }
 
   _makeWindows(building, w, d) {
-    const winMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x9bd1e6, emissive: 0xffe9b6, emissiveIntensity: 0.2 });
-    const frameMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x5a3a1a });
-    const sillMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
-    const shutterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a8a3a });
+    const winMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.water, emissive: PAL.lanternEmissive, emissiveIntensity: 0.2 });
+    const frameMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.windowFrame });
+    const sillMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding });
+    const shutterMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.shutter });
 
     const placeWindow = (x, y, z, rotY, withShutters = true) => {
       const grp = new THREE.Group();
@@ -314,9 +318,9 @@ export class Buildings {
 
     // Mailbox in front (toward plaza)
     const mb = new THREE.Group();
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a }));
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 6), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding }));
     post.position.y = 0.5;
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.55), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xd63a2c }));
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.55), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.fruitApple }));
     box.position.set(0, 1.05, 0.05);
     mb.add(post, box);
     mb.position.set(0, g.position.y, 10 - 2.3);
@@ -335,8 +339,8 @@ export class Buildings {
     this.list.push(g);
 
     // Picket fence — continuous ring with two stringers and vertical pickets.
-    const fenceMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xeacfa8 });
-    const darkMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xa8845a });
+    const fenceMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.fence });
+    const darkMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.dirtStep });
     const r = 4.0;
     const sides = 32; // smoother ring, no visible segment seams
     // Sample evenly-spaced points around the ring
@@ -383,14 +387,14 @@ export class Buildings {
   _makeShop(pos, name, roofColor, wallColor) {
     const g = this._makeBuildingShell(6.0, 4.5, wallColor, roofColor);
     // Awning
-    const awningMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xff5e5e });
+    const awningMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.hull0 });
     const awning = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.12, 1.2), awningMat);
     awning.position.set(0, 1.85, 2.65);
     awning.rotation.x = -Math.PI / 8;
     awning.castShadow = true;
     g.add(awning);
     // Awning stripes
-    const stripeMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff });
+    const stripeMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit });
     for (let i = 0; i < 6; i++) {
       const s = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.13, 1.2), stripeMat);
       s.position.set(-2.5 + i, 1.86, 2.65);
@@ -400,7 +404,7 @@ export class Buildings {
     // Sign
     const signBg = new THREE.Mesh(
       new THREE.BoxGeometry(3.2, 0.8, 0.1),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x4a2a1a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.doorInset })
     );
     signBg.position.set(0, 2.4, 2.3);
     g.add(signBg);
@@ -425,7 +429,7 @@ export class Buildings {
   _makeMuseum(pos, name, roofColor, wallColor) {
     const g = this._makeBuildingShell(7.0, 5.0, wallColor, roofColor);
     // Columns at the front
-    const colMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xf2e0c0 });
+    const colMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.woodLight });
     for (let i = -1; i <= 1; i++) {
       const col = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.0, 10), colMat);
       col.position.set(i * 2, 1.0, 2.55);
@@ -435,7 +439,7 @@ export class Buildings {
     // Pediment
     const pedi = new THREE.Mesh(
       new THREE.BoxGeometry(7.2, 0.2, 1.0),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xeed7a8 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.woodLight })
     );
     pedi.position.set(0, 2.1, 2.55);
     g.add(pedi);
@@ -473,7 +477,7 @@ export class Buildings {
     // Outer stone rim (octagonal)
     const rim = new THREE.Mesh(
       new THREE.CylinderGeometry(1.95, 1.95, 0.22, 8),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xb8b6ad })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     rim.position.y = 0.16;
     rim.castShadow = true; rim.receiveShadow = true;
@@ -481,7 +485,7 @@ export class Buildings {
     // Light-gray inner sleeve so the well reads as stone, not a chocolate well
     const basin = new THREE.Mesh(
       new THREE.CylinderGeometry(1.7, 1.7, 0.18, 20),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xb8b6ad })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     basin.position.y = 0.18;
     basin.castShadow = true;
@@ -490,8 +494,8 @@ export class Buildings {
     const water = new THREE.Mesh(
       new THREE.CylinderGeometry(1.55, 1.55, 0.04, 24),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0x9ed4f0,
-        emissive: 0x6abee5, emissiveIntensity: 0.5,
+        color: PAL.water,
+        emissive: PAL.waterDeep, emissiveIntensity: 0.5,
       })
     );
     water.position.y = 0.30;
@@ -501,8 +505,8 @@ export class Buildings {
     const mound = new THREE.Mesh(
       new THREE.SphereGeometry(1.1, 18, 14),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0xb8e4ff,
-        emissive: 0x7acaf0, emissiveIntensity: 0.4,
+        color: PAL.skyDay,
+        emissive: PAL.water, emissiveIntensity: 0.4,
       })
     );
     mound.position.y = 0.52;
@@ -512,8 +516,8 @@ export class Buildings {
     const waterRing = new THREE.Mesh(
       new THREE.TorusGeometry(1.55, 0.1, 12, 24),
       new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-        color: 0xb8e4ff,
-        emissive: 0x6abee5, emissiveIntensity: 0.5,
+        color: PAL.skyDay,
+        emissive: PAL.waterDeep, emissiveIntensity: 0.5,
       })
     );
     waterRing.rotation.x = -Math.PI / 2;
@@ -522,7 +526,7 @@ export class Buildings {
     // Central pillar (thicker)
     const pillar = new THREE.Mesh(
       new THREE.CylinderGeometry(0.35, 0.45, 1.2, 12),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xc4c2b8 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     pillar.position.y = 1.05;
     pillar.castShadow = true;
@@ -530,7 +534,7 @@ export class Buildings {
     // Top "urn" bowl (bigger)
     const urn = new THREE.Mesh(
       new THREE.CylinderGeometry(0.7, 0.4, 0.55, 14),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xc4c2b8 })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.rock })
     );
     urn.position.y = 1.85;
     urn.castShadow = true;
@@ -538,7 +542,7 @@ export class Buildings {
     // Glowing spray ball — water mist, not a marble
     const spray = new THREE.Mesh(
       new THREE.SphereGeometry(0.3, 14, 10),
-      new THREE.MeshBasicMaterial({ color: 0xdff2ff, transparent: true, opacity: 0.7 })
+      new THREE.MeshBasicMaterial({ color: PAL.glass, transparent: true, opacity: 0.7 })
     );
     spray.position.y = 2.25;
     fount.add(spray);
@@ -549,7 +553,7 @@ export class Buildings {
       const drop = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 6, 4),
         new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-          color: 0xdff2ff, transparent: true, opacity: 0.85, emissive: 0x7acaf0, emissiveIntensity: 0.6,
+          color: PAL.glass, transparent: true, opacity: 0.85, emissive: PAL.water, emissiveIntensity: 0.6,
         })
       );
       const ang = (i / 18) * Math.PI * 2;
@@ -559,7 +563,7 @@ export class Buildings {
     }
     // Plaza lanterns — 4 short posts around the fountain
     const lanternMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3),
-      color: 0xffe9b6, emissive: 0xffd56e, emissiveIntensity: 0.5,
+      color: 0xffe9b6, emissive: PAL.doorknob, emissiveIntensity: 0.5,
     });
     this.lanternLights = [];
     for (let i = 0; i < 4; i++) {
@@ -586,7 +590,7 @@ export class Buildings {
     g.add(fount);
 
     // Benches around the plaza
-    const benchMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x8a5a3a });
+    const benchMat = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wallSiding });
     const bench = (x, z, ry) => {
       const b = new THREE.Group();
       const seat = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 0.5), benchMat);
@@ -619,7 +623,7 @@ export class Buildings {
   _makeSignpost() {
     const post = new THREE.Mesh(
       new THREE.CylinderGeometry(0.07, 0.07, 1.6, 8),
-      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x6a4a2a })
+      new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.wood })
     );
     post.position.set(8, this.world.heightAt(8, -3) + 0.8, -3);
     post.castShadow = true;

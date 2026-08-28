@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { ITEMS } from './inventory.js';
+import { HEX as PAL } from './core/palette.js';
 
 export class Interactions {
   constructor(modules) {
@@ -133,7 +134,7 @@ export class Interactions {
         inventory.remove(giftId, 1);
         // Visual reaction: heart particles at the villager's head
         const heartPos = nearby.position.clone().add(new THREE.Vector3(0, 1.4, 0));
-        particles.spawnPickupPuff(heartPos, 0xff7aa8);
+        particles.spawnPickupPuff(heartPos, PAL.heartPink);
         // Per-gift reaction line
         const lines = {
           flower:  ['Oh! A flower — thank you!', 'So pretty! I\'ll press it.'],

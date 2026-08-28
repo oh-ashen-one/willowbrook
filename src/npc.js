@@ -3,11 +3,12 @@
 
 import * as THREE from 'three';
 import { gradientMap } from './toon.js';
+import { HEX as PAL } from './core/palette.js';
 
 const VILLAGER_DEFS = [
   {
     name: 'Maple', species: 'bear',
-    palette: { fur: 0xc89060, snout: 0xeac098, shirt: 0xe65a5a },
+    palette: { fur: PAL.villagerFurBear, snout: PAL.villagerSnoutBear, shirt: PAL.villagerShirtBear },
     home: 'oak',
     birthday: 'Spring 17',
     favoriteGift: 'flower',
@@ -20,7 +21,7 @@ const VILLAGER_DEFS = [
   },
   {
     name: 'Finn', species: 'frog',
-    palette: { fur: 0x9bd15e, snout: 0xc7e89a, shirt: 0xffd54f },
+    palette: { fur: PAL.villagerFurFrog, snout: PAL.villagerSnoutFrog, shirt: PAL.villagerShirtFrog },
     home: 'lily',
     birthday: 'Summer 4',
     favoriteGift: 'bug',
@@ -33,7 +34,7 @@ const VILLAGER_DEFS = [
   },
   {
     name: 'Pebble', species: 'cub',
-    palette: { fur: 0xa88860, snout: 0xd4b78a, shirt: 0x6b9bd1 },
+    palette: { fur: PAL.villagerFurCub, snout: PAL.villagerSnoutCub, shirt: PAL.villagerShirtCub },
     home: 'cedar',
     birthday: 'Spring 28',
     favoriteGift: 'fossil',
@@ -46,7 +47,7 @@ const VILLAGER_DEFS = [
   },
   {
     name: 'Coral', species: 'octopus',
-    palette: { fur: 0xff8aa8, snout: 0xffd0e0, shirt: 0x7cc6e0 },
+    palette: { fur: PAL.villagerFurOctopus, snout: PAL.villagerSnoutOctopus, shirt: PAL.villagerShirtOctopus },
     home: 'shell',
     birthday: 'Autumn 9',
     favoriteGift: 'shell',
@@ -59,7 +60,7 @@ const VILLAGER_DEFS = [
   },
   {
     name: 'Hazel', species: 'squirrel',
-    palette: { fur: 0xc06a3a, snout: 0xeab084, shirt: 0x9a6bd1 },
+    palette: { fur: PAL.villagerFurSquirrel, snout: PAL.villagerSnoutSquirrel, shirt: PAL.villagerShirtSquirrel },
     home: 'acorn',
     birthday: 'Autumn 23',
     favoriteGift: 'acorn',
@@ -205,13 +206,13 @@ export class Villagers {
     muzzle.scale.set(1.1, 0.85, 0.8);
     g.add(muzzle);
     // Nose
-    const noseMat = new THREE.MeshBasicMaterial({ color: 0x2a1810 });
+    const noseMat = new THREE.MeshBasicMaterial({ color: PAL.hudInk });
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), noseMat);
     nose.position.set(0, 1.40, 0.50);
     g.add(nose);
     // Eyes
     for (const side of [-1, 1]) {
-      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff }));
+      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit }));
       eyeWhite.position.set(side * 0.13, 1.50, 0.36);
       eyeWhite.scale.set(0.7, 1, 0.5);
       g.add(eyeWhite);
@@ -293,11 +294,11 @@ export class Villagers {
       bump.scale.set(0.85, 1.1, 0.85);
       g.add(bump);
       // Eye white inside bump
-      const white = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff }));
+      const white = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit }));
       white.position.set(side * 0.22, 1.45, 0.08);
       white.scale.set(0.8, 1.0, 0.5);
       g.add(white);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0x1a120a }));
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: PAL.hudInk }));
       pupil.position.set(side * 0.225, 1.45, 0.14);
       g.add(pupil);
     }
@@ -369,11 +370,11 @@ export class Villagers {
     }
     // Big eyes on the head
     for (const side of [-1, 1]) {
-      const white = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff }));
+      const white = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit }));
       white.position.set(side * 0.20, 1.20, 0.40);
       white.scale.set(0.85, 1, 0.5);
       g.add(white);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0x1a120a }));
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: PAL.hudInk }));
       pupil.position.set(side * 0.20, 1.20, 0.48);
       g.add(pupil);
     }
@@ -413,20 +414,20 @@ export class Villagers {
     sn.position.set(0, 1.22, 0.32);
     g.add(sn);
     // Nose tip
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0x2a1810 }));
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: PAL.hudInk }));
     nose.position.set(0, 1.22, 0.45);
     g.add(nose);
     // Big round eyes
     for (const side of [-1, 1]) {
-      const white = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xffffff }));
+      const white = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.cloudLit }));
       white.position.set(side * 0.10, 1.35, 0.22);
       white.scale.set(0.85, 1, 0.5);
       g.add(white);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0x1a120a }));
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: PAL.hudInk }));
       pupil.position.set(side * 0.10, 1.35, 0.265);
       g.add(pupil);
       // Tiny eye highlight
-      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 4), new THREE.MeshBasicMaterial({ color: PAL.cloudLit }));
       shine.position.set(side * 0.085, 1.37, 0.285);
       g.add(shine);
     }
@@ -526,8 +527,8 @@ export class Villagers {
       // math honest.
       greeting: ['Hippity hop!', 'I hid eggs this morning.', 'Happy Bunny Day!'],
     };
-    const fur = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xf5e6c8 });
-    const pink = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0xff9ec0 });
+    const fur = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.skin });
+    const pink = new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.villagerFurOctopus });
     // Body (egg)
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), fur);
     body.position.y = 0.45;
@@ -551,7 +552,7 @@ export class Villagers {
     // Eyes
     for (const sx of [-1, 1]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6),
-        new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: 0x222222 }));
+        new THREE.MeshToonMaterial({ gradientMap: gradientMap(3), color: PAL.hudInk }));
       eye.position.set(sx * 0.10, 0.92, 0.21);
       g.add(eye);
     }
